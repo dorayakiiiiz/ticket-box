@@ -39,11 +39,10 @@ export default function SeatMapPage() {
     const active = sel?.id === zoneId;
     return (
       <button onClick={() => { setSel(z); setQty(1); }}
-        className="flex items-center justify-center text-[9px] font-black uppercase tracking-wider border-2 transition-all hover:brightness-110"
+        className="flex items-center justify-center text-[9px] md:text-[11px] font-black uppercase tracking-wider border-2 transition-all hover:brightness-110 py-3 px-1 md:py-4"
         style={{
           backgroundColor: z.color + "30", borderColor: active ? z.color : z.color + "60",
           color: z.color, gridRow: rows > 1 ? `span ${rows}` : undefined,
-          padding: "12px 4px",
         }}>
         <span style={{ textAlign: "center", lineHeight: 1.2 }}>{(label ?? z.name).replace(" — ", "\n")}</span>
       </button>
@@ -51,7 +50,7 @@ export default function SeatMapPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col pt-14">
+    <div className="min-h-screen flex flex-col">
       <div className="border-b border-[#222] bg-[#0a0a0a] px-6 py-4 flex items-center justify-between">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 hover:text-white uppercase tracking-widest"><ChevronLeft size={14} /> Trở về</button>
         <div className="text-center">
@@ -67,32 +66,32 @@ export default function SeatMapPage() {
           <div className="text-center mb-5">
             <p className="text-[11px] font-mono tracking-[0.2em] text-[#CCFF00] uppercase">Chọn khu vực — Bấm vào sơ đồ</p>
           </div>
-          <div className="w-full max-w-xl flex flex-col gap-2">
+          <div className="w-full max-w-xl lg:max-w-3xl flex flex-col gap-2 lg:gap-3">
             {/* Stage */}
-            <div className="flex justify-center mb-1">
-              <div className="bg-white/5 border border-white/10 px-24 py-2.5 text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">STAGE</div>
+            <div className="flex justify-center mb-1 lg:mb-3">
+              <div className="bg-white/5 border border-white/10 px-24 py-2.5 lg:py-4 lg:px-32 text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] text-gray-500">STAGE</div>
             </div>
             {/* CAT row top */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2 lg:gap-3">
               <ZoneBtn zoneId="cat2a" label="CAT 2A" />
               <ZoneBtn zoneId="cat2b" label="CAT 2B" />
             </div>
             {/* Middle block */}
-            <div className="grid grid-cols-[60px_1fr_60px] gap-2">
-              <div className="grid grid-rows-2 gap-2">
+            <div className="grid grid-cols-[60px_1fr_60px] lg:grid-cols-[80px_1fr_80px] gap-2 lg:gap-3">
+              <div className="grid grid-rows-2 gap-2 lg:gap-3">
                 <ZoneBtn zoneId="fz-2a" label="GA 2A" />
                 <ZoneBtn zoneId="fz-1a" label="GA 1A" />
               </div>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-2 lg:gap-3">
                 <ZoneBtn zoneId="ozone" label="OZONE" />
               </div>
-              <div className="grid grid-rows-2 gap-2">
+              <div className="grid grid-rows-2 gap-2 lg:gap-3">
                 <ZoneBtn zoneId="fz-2b" label="GA 2B" />
                 <ZoneBtn zoneId="fz-1b" label="GA 1B" />
               </div>
             </div>
             {/* VIP / SVIP / SKY */}
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-2 lg:gap-3">
               <ZoneBtn zoneId="vip-a"  label="VIP A" />
               <ZoneBtn zoneId="svip-a" label="SVIP A" />
               <ZoneBtn zoneId="sky"    label="SKY" />
@@ -100,9 +99,9 @@ export default function SeatMapPage() {
               <ZoneBtn zoneId="vip-b"  label="VIP B" />
             </div>
             {/* CAT 1 */}
-            <div className="grid grid-cols-[1fr_60px_1fr] gap-2">
+            <div className="grid grid-cols-[1fr_60px_1fr] lg:grid-cols-[1fr_80px_1fr] gap-2 lg:gap-3">
               <ZoneBtn zoneId="cat1a" label="CAT 1A" />
-              <div className="flex items-center justify-center text-[8px] font-mono tracking-widest text-gray-500 border border-[#222]">FOH</div>
+              <div className="flex items-center justify-center text-[8px] lg:text-[10px] font-mono tracking-widest text-gray-500 border border-[#222]">FOH</div>
               <ZoneBtn zoneId="cat1b" label="CAT 1B" />
             </div>
           </div>

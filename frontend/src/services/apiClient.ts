@@ -1,23 +1,33 @@
 import axios from 'axios';
+import { useAuthStore } from '../stores/authStore';
 
+// Backend runs on port 8080 according to the plan
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+  baseURL: 'http://localhost:8080',
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
-// Thêm interceptor nếu cần (VD: gán JWT token)
 apiClient.interceptors.request.use(
   (config) => {
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    const token = useAuthStore.getState().token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Xử lý lỗi chung (VD: Token hết hạn -> Xóa token)
+    if (error.response?.status === 401) {
+      // Gọi hàm logout của store để clear toàn bộ (cookie, local, state)
+      useAuthStore.getState().logout();
+    }
     return Promise.reject(error);
   }
 );
