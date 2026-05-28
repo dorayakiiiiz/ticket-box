@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
+import ClientLayout from "../components/layout/ClientLayout";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["vietnamese", "latin"],
@@ -18,8 +17,8 @@ const barlowCondensed = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "VITICKET - Nền tảng bán vé sự kiện",
-  description: "VITICKET - Hệ thống đặt vé Concert hàng đầu Việt Nam",
+  title: "TicketZ - Nền tảng bán vé sự kiện",
+  description: "TicketZ - Hệ thống đặt vé Concert hàng đầu Việt Nam",
 };
 
 export default function RootLayout({
@@ -29,12 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" className={`${plusJakartaSans.variable} ${barlowCondensed.variable}`}>
-      <body className="antialiased bg-[#050505] text-white min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 pt-14">
+      <body suppressHydrationWarning className="antialiased bg-[#050505] text-white min-h-screen flex flex-col">
+        <ClientLayout>
           {children}
-        </main>
-        <Footer />
+        </ClientLayout>
       </body>
     </html>
   );

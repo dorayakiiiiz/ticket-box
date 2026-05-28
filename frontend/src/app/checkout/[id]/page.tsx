@@ -51,7 +51,7 @@ export default function CheckoutPage() {
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
 
   return (
-    <div className="min-h-screen pt-14">
+    <div className="min-h-screen">
       <div className="border-b border-[#222] bg-[#0a0a0a] px-6 py-4 flex items-center justify-between">
         <button onClick={() => router.back()} className="flex items-center gap-2 text-[11px] font-semibold text-gray-500 hover:text-white uppercase tracking-widest"><ChevronLeft size={14} /> Quay lại</button>
         <div style={D} className="text-lg font-black uppercase italic">Thanh toán</div>
@@ -103,7 +103,7 @@ export default function CheckoutPage() {
               <div className={`w-4 h-4 border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${agreed ? "border-[#CCFF00] bg-[#CCFF00]" : "border-[#333]"}`}>
                 {agreed && <X size={10} className="text-black" />}
               </div>
-              <span className="text-[11px] text-gray-400 leading-relaxed">Tôi đã đọc và đồng ý với <span className="text-[#CCFF00]">Điều khoản sử dụng</span> và <span className="text-[#CCFF00]">Chính sách hoàn tiền</span> của VITICKET.</span>
+              <span className="text-[11px] text-gray-400 leading-relaxed">Tôi đã đọc và đồng ý với <span className="text-[#CCFF00]">Điều khoản sử dụng</span> và <span className="text-[#CCFF00]">Chính sách hoàn tiền</span> của TicketZ.</span>
             </button>
 
             <button onClick={() => { if (name && email && agreed) router.push(`/ticket/${event.id}?zone=${zone.id}&qty=${qty}&holderName=${encodeURIComponent(name)}`); }}

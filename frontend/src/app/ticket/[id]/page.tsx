@@ -38,7 +38,7 @@ export default function ETicketPage() {
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16 bg-[#050505] pt-20">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16 bg-[#050505]">
       <div className="flex items-center gap-2 mb-8">
         <CheckCircle size={16} className="text-[#CCFF00]" />
         <span className="text-[#CCFF00] font-bold text-sm uppercase tracking-[0.12em]">Thanh toán thành công — E-ticket đã gửi qua email</span>
@@ -54,7 +54,7 @@ export default function ETicketPage() {
           <div className="p-7 pb-5">
             <div className="flex items-start justify-between gap-4 mb-7">
               <div>
-                <div style={D} className="text-[10px] font-mono tracking-[0.25em] text-gray-500 uppercase mb-1">VITICKET — E-TICKET</div>
+                <div style={D} className="text-[10px] font-mono tracking-[0.25em] text-gray-500 uppercase mb-1">TicketZ — E-TICKET</div>
                 <h1 style={{ ...D, fontSize: "clamp(28px,4.5vw,52px)" }}
                   className="font-black uppercase italic leading-none text-white">{event.name}</h1>
                 <p className="text-sm font-semibold tracking-[0.06em] mt-1.5" style={{ color: zone.color }}>{event.subtitle}</p>
@@ -145,7 +145,7 @@ export default function ETicketPage() {
         </div>
 
         <div className="text-center mt-3 text-[9px] font-mono text-gray-500 tracking-[0.15em]">
-          VÉ ĐIỆN TỬ · KHÔNG CẦN IN · CHỈ SỬ DỤNG MỘT LẦN · VITICKET.VN
+          VÉ ĐIỆN TỬ · KHÔNG CẦN IN · CHỈ SỬ DỤNG MỘT LẦN · TICKETZ.VN
         </div>
       </div>
 

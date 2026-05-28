@@ -43,7 +43,7 @@ Tài liệu này trình bày toàn bộ stack công nghệ sử dụng và danh 
   - Lấy API Key của Google Gemini và tạo tài khoản Sandbox VNPAY.
 - [ ] **Setup NestJS Backend:**
   - Chạy `nest new backend`.
-  - Cấu hình Prisma schema (`User`, `Concert`, `TicketType`, `Order`, `Ticket`, `Guest`) và chạy migration.
+  - Cấu hình TypeORM schema (`User`, `Concert`, `TicketType`, `Order`, `Ticket`, `Guest`) và chạy migration.
   - Setup kết nối `ioredis` và module `@nestjs/bullmq`.
 - [ ] **Setup Next.js & Flutter:**
   - Khởi tạo Next.js App Router + Tailwind.
