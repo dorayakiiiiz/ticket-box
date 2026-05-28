@@ -2,7 +2,7 @@
 
 ## 1. Bức Tranh Tổng Thể (The Big Picture)
 
-Đây là "linh hồn" và cũng là điểm khó nhất của toàn bộ đồ án TicketBox. Khác với các web bán hàng thông thường, bán vé sự kiện có một đặc thù: **Nhu cầu thì khổng lồ, nhưng sản phẩm thì hữu hạn và mọi người đổ xô vào mua trong cùng 1 tích tắc**.
+Đây là "linh hồn" của toàn bộ đồ án TicketBox. Khác với các web bán hàng thông thường, bán vé sự kiện có một đặc thù: **Nhu cầu thì khổng lồ, nhưng sản phẩm thì hữu hạn và mọi người đổ xô vào mua trong cùng 1 tích tắc**.
 Ví dụ: Concert Anh Trai Say Hi có hạng vé SVIP chỉ 200 chỗ. Khi vừa mở bán, 80.000 người cùng ấn nút "Mua vé" vào lúc 12:00:00. 
 
 Nếu ta xử lý theo cách thông thường:
