@@ -43,11 +43,11 @@ export default function HeroCarousel() {
         <div className="max-w-lg" style={{ opacity: fading ? 0 : 1, transition: "opacity 0.28s ease" }}>
           {/* Tag */}
           <div className="flex items-center gap-3 mb-5">
-            <span className="text-[9px] font-black tracking-[0.2em] uppercase px-2 py-1"
+            <span className="text-[9px] md:text-xs font-black tracking-[0.2em] uppercase px-2 py-1"
               style={{ backgroundColor: s.accentColor, color: s.accentColor === "#CCFF00" ? "#080808" : "#fff" }}>
               {s.tag}
             </span>
-            <span className="text-[10px] font-mono tracking-[0.15em] text-white/35 uppercase">Sự kiện nổi bật</span>
+            <span className="text-[10px] md:text-xs font-mono tracking-[0.15em] text-white/35 uppercase">Sự kiện nổi bật</span>
           </div>
 
           {/* Name */}
@@ -55,15 +55,15 @@ export default function HeroCarousel() {
             {s.name}
           </h1>
 
-          <p className="text-[10px] font-semibold tracking-[0.1em] uppercase text-white/45 mb-3">{s.subtitle}</p>
-          <p className="text-sm text-white/55 mb-7 leading-relaxed">{s.artists}</p>
+          <p className="text-[10px] md:text-xs font-semibold tracking-[0.1em] uppercase text-white/45 mb-3">{s.subtitle}</p>
+          <p className="text-[10px] md:text-sm text-white/55 mb-7 leading-relaxed">{s.artists}</p>
 
           <div className="flex flex-wrap gap-5 mb-8">
-            <div className="flex items-center gap-1.5 text-[11px] text-white/55">
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-white/55">
               <Calendar size={11} className="text-[#CCFF00]" />
               <span>{s.date} · {s.time}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-white/55">
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-white/55">
               <MapPin size={11} className="text-[#CCFF00]" />
               <span>{s.venue}, {s.city}</span>
             </div>
@@ -71,8 +71,8 @@ export default function HeroCarousel() {
 
           <div className="flex items-center gap-5">
             <div>
-              <div className="text-[9px] text-white/35 uppercase tracking-widest mb-0.5">Vé từ</div>
-              <div style={D} className="text-[32px] font-black text-white leading-none">{s.price}đ</div>
+              <div className="text-[10px] md:text-xs text-white/35 uppercase tracking-widest mb-0.5">Vé từ</div>
+              <div style={D} className="text-[24px] md:text-[32px] font-black text-white leading-none">{s.price}đ</div>
             </div>
             <div className="flex items-center gap-2">
               <Link href={`/concert/${s.eventId}`}

@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, Download } from 'lucide-react';
-import { concertService } from '../../../services/concertService';
-import { EventInfo, ZoneInfo } from '../../../types';
-import { fmt } from '../../../utils/format';
+import { concertService } from '@/services/concertService';
+import { EventInfo, ZoneInfo } from '@/types';
+import { fmt } from '@/utils/format';
 
 export default function ETicketPage() {
   const params = useParams();
@@ -41,7 +41,7 @@ export default function ETicketPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16 bg-[#050505]">
       <div className="flex items-center gap-2 mb-8">
         <CheckCircle size={16} className="text-[#CCFF00]" />
-        <span className="text-[#CCFF00] font-bold text-sm uppercase tracking-[0.12em]">Thanh toán thành công — E-ticket đã gửi qua email</span>
+        <span className="text-[#CCFF00] font-bold text-sm md:text-base uppercase tracking-[0.12em]">Thanh toán thành công — E-ticket đã gửi qua email</span>
       </div>
 
       {/* TICKET */}
@@ -54,14 +54,14 @@ export default function ETicketPage() {
           <div className="p-7 pb-5">
             <div className="flex items-start justify-between gap-4 mb-7">
               <div>
-                <div style={D} className="text-[10px] font-mono tracking-[0.25em] text-gray-500 uppercase mb-1">TicketZ — E-TICKET</div>
+                <div style={D} className="text-[10px] md:text-xs font-mono tracking-[0.25em] text-gray-500 uppercase mb-1">TicketZ — E-TICKET</div>
                 <h1 style={{ ...D, fontSize: "clamp(28px,4.5vw,52px)" }}
                   className="font-black uppercase italic leading-none text-white">{event.name}</h1>
-                <p className="text-sm font-semibold tracking-[0.06em] mt-1.5" style={{ color: zone.color }}>{event.subtitle}</p>
+                <p className="text-sm md:text-base font-semibold tracking-[0.06em] mt-1.5" style={{ color: zone.color }}>{event.subtitle}</p>
               </div>
               <div className="shrink-0 text-right">
-                <div className="text-[9px] font-mono text-gray-500 mb-1">VÉ SỐ</div>
-                <div className="font-mono font-bold text-sm" style={{ color: zone.color }}>{ticketNo}</div>
+                <div className="text-[9px] md:text-[10px] font-mono text-gray-500 mb-1">VÉ SỐ</div>
+                <div className="font-mono font-bold text-sm md:text-base" style={{ color: zone.color }}>{ticketNo}</div>
               </div>
             </div>
 
@@ -73,15 +73,15 @@ export default function ETicketPage() {
                 { label: "Thành phố", value: event.city },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <div className="text-[9px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">{label}</div>
-                  <div className="text-sm font-bold text-white">{value}</div>
+                  <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">{label}</div>
+                  <div className="text-sm md:text-base font-bold text-white">{value}</div>
                 </div>
               ))}
             </div>
 
             <div>
-              <div className="text-[9px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Nghệ sĩ</div>
-              <div className="text-xs text-white/60">{event.artistList.map(a => a.name).join(" · ")}</div>
+              <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Nghệ sĩ</div>
+              <div className="text-xs md:text-sm text-white/60">{event.artistList.map(a => a.name).join(" · ")}</div>
             </div>
           </div>
 
@@ -98,17 +98,17 @@ export default function ETicketPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 shrink-0" style={{ backgroundColor: zone.color }} />
-                <div className="text-[9px] font-mono tracking-[0.2em] uppercase text-gray-500">Khu vực</div>
+                <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500">Khu vực</div>
               </div>
               <div style={{ ...D, color: zone.color }} className="text-5xl font-black uppercase italic leading-none mb-3">{zone.name}</div>
-              <div className="text-[11px] text-gray-500 mb-5">{zone.type} · {qty} vé</div>
+              <div className="text-[11px] md:text-xs text-gray-500 mb-5">{zone.type} · {qty} vé</div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-[9px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Khán giả</div>
-                  <div className="text-sm font-bold text-white">{holderName}</div>
+                  <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Khán giả</div>
+                  <div className="text-sm md:text-base font-bold text-white">{holderName}</div>
                 </div>
                 <div>
-                  <div className="text-[9px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Giá trị</div>
+                  <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Giá trị</div>
                   <div style={D} className="text-xl font-black text-white">{fmt(total)}đ</div>
                 </div>
               </div>
@@ -136,25 +136,25 @@ export default function ETicketPage() {
                   ))}
                 </svg>
               </div>
-              <div className="font-mono text-[9px] text-gray-500 tracking-[0.12em]">{ticketNo}</div>
-              <div className="text-[9px] text-gray-500">Quét tại cổng vào</div>
+              <div className="font-mono text-[9px] md:text-[10px] text-gray-500 tracking-[0.12em]">{ticketNo}</div>
+              <div className="text-[9px] md:text-[10px] text-gray-500">Quét tại cổng vào</div>
             </div>
           </div>
 
           <div className="h-px w-full" style={{ backgroundColor: zone.color + "30" }} />
         </div>
 
-        <div className="text-center mt-3 text-[9px] font-mono text-gray-500 tracking-[0.15em]">
+        <div className="text-center mt-3 text-[9px] md:text-[10px] font-mono text-gray-500 tracking-[0.15em]">
           VÉ ĐIỆN TỬ · KHÔNG CẦN IN · CHỈ SỬ DỤNG MỘT LẦN · TICKETZ.VN
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-        <button className="flex items-center gap-2 bg-[#CCFF00] text-black font-black uppercase tracking-[0.12em] text-xs px-6 py-3 hover:bg-white transition-colors">
+        <button className="flex items-center gap-2 bg-[#CCFF00] text-black font-black uppercase tracking-[0.12em] text-xs md:text-sm px-6 py-3 hover:bg-white transition-colors">
           <Download size={13} /> Tải về PDF
         </button>
-        <button onClick={() => router.push('/')} className="border border-[#333] text-gray-400 font-semibold text-xs uppercase tracking-widest px-6 py-3 hover:border-white/30 hover:text-white transition-colors bg-transparent">
+        <button onClick={() => router.push('/')} className="border border-[#333] text-gray-400 font-semibold text-xs md:text-sm uppercase tracking-widest px-6 py-3 hover:border-white/30 hover:text-white transition-colors bg-transparent">
           Về trang chủ
         </button>
       </div>

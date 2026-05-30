@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { authService } from '../../../services/authService';
-import { useAuthStore } from '../../../stores/authStore';
+import { authService } from '@/services/authService';
+import { useAuthStore } from '@/stores/authStore';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -19,14 +19,14 @@ export default function AuthCallbackPage() {
 
         // Supabase client tự động bắt hash fragment và tạo session
         const { data: { session }, error: sbError } = await supabase.auth.getSession();
-        
+
         if (sbError || !session) {
           throw new Error(sbError?.message || 'Không tìm thấy phiên đăng nhập Supabase');
         }
 
         // Gửi access_token của Supabase lên Backend để đổi lấy JWT của hệ thống
         const data = await authService.googleLogin(session.access_token);
-        
+
         // Lưu vào Zustand
         useAuthStore.getState().login(data.user, data.token);
 

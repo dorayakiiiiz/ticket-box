@@ -16,7 +16,7 @@ export default function Footer() {
                 <Sparkles className="absolute -top-1 -right-3.5 w-5 h-5 text-white fill-white" />
               </span>
             </Link>
-            <p className="text-[12px] text-gray-500 leading-relaxed max-w-[200px]">
+            <p className="text-[12px] md:text-sm text-gray-500 leading-relaxed max-w-[200px]">
               Nền tảng mua vé sự kiện âm nhạc và giải trí hàng đầu Việt Nam.
             </p>
           </div>
@@ -26,10 +26,10 @@ export default function Footer() {
             { title: "Hỗ trợ", links: ["Câu hỏi thường gặp", "Liên hệ", "Chính sách hoàn tiền", "Điều khoản"] }
           ].map(({ title, links }) => (
             <div key={title}>
-              <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500 mb-4">{title}</div>
+              <div className="text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase text-gray-500 mb-4">{title}</div>
               <div className="flex flex-col gap-2.5">
                 {links.map(l => (
-                  <Link key={l} href="/" className="text-[12px] text-gray-400 hover:text-white transition-colors">
+                  <Link key={l} href="/" className="text-[12px] md:text-sm text-gray-400 hover:text-white transition-colors">
                     {l}
                   </Link>
                 ))}
@@ -38,8 +38,8 @@ export default function Footer() {
           ))}
         </div>
         <div className="border-t border-[#222] pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-[11px] text-gray-500">© 2026 TicketZ. Bảo lưu mọi quyền.</p>
-          <div className="flex gap-4 text-[11px] text-gray-500">
+          <p className="text-[11px] md:text-xs text-gray-500">© 2026 TicketZ. Bảo lưu mọi quyền.</p>
+          <div className="flex gap-4 text-[11px] md:text-xs text-gray-500">
             {["Facebook", "Instagram", "TikTok", "YouTube"].map(s => (
               <a key={s} href="#" className="hover:text-white transition-colors">{s}</a>
             ))}
