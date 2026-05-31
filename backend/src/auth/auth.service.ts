@@ -102,7 +102,7 @@ export class AuthService {
     }
 
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
   }
 
   async supabaseOAuthLogin(supabaseToken: string) {
@@ -125,6 +125,6 @@ export class AuthService {
 
     // Trả về JWT của hệ thống TicketBox
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
   }
 }

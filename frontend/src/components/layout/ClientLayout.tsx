@@ -8,9 +8,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   
   const isBooking = pathname.startsWith('/booking');
   const isTicket = pathname.startsWith('/ticket');
+  const isAdmin = pathname.startsWith('/admin'); // admin dùng layout riêng có sidebar
 
-  const hideFooter = isBooking || isTicket;
-  const hideNav = isTicket;
+  const hideFooter = isBooking || isTicket || isAdmin;
+  const hideNav = isTicket || isAdmin;
 
   return (
     <>

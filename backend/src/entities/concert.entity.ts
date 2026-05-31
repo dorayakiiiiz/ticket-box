@@ -37,6 +37,13 @@ export class Concert {
   @Column({ type: 'enum', enum: ConcertStatus, default: ConcertStatus.UPCOMING })
   status: ConcertStatus;
 
+  @Column({ nullable: true, type: 'text' })
+  aiBio: string;
+
+  // IDLE | PROCESSING | DONE | FAILED — track trạng thái job AI
+  @Column({ default: 'IDLE' })
+  aiBioStatus: string;
+
   @OneToMany(() => TicketType, ticketType => ticketType.concert)
   ticketTypes: TicketType[];
 
