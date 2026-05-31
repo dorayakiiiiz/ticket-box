@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './common/guards/jwt.strategy';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { ConcertModule } from './concert/concert.module';
 import { User } from './entities/user.entity';
 import { Otp } from './entities/otp.entity';
 import { Concert } from './entities/concert.entity';
@@ -43,6 +44,7 @@ import { Guest } from './entities/guest.entity';
       inject: [ConfigService],
     }),
     AuthModule,
+    ConcertModule,
   ],
   controllers: [AppController],
   providers: [
