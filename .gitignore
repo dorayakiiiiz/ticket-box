@@ -1,0 +1,6 @@
+
+# Internal agent config
+.claude/
+
+# Internal task notes
+tasks/

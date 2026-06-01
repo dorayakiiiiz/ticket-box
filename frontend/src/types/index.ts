@@ -62,3 +62,20 @@ export type Concert = {
   createdAt: string;
   updatedAt: string;
 };
+
+// Response của GET /concerts/:id/availability
+// Đọc từ Redis — dùng bởi SWR poll 5 giây trên trang chi tiết concert
+export type TicketAvailabilityItem = {
+  id: string;
+  name: string;
+  colorCode: string;
+  totalQuantity: number;
+  available: number;  // Giá trị từ Redis (real-time)
+  soldOut: boolean;
+};
+
+export type ConcertAvailability = {
+  concertId: string;
+  updatedAt: string;
+  ticketTypes: TicketAvailabilityItem[];
+};

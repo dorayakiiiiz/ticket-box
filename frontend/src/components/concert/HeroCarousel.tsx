@@ -8,23 +8,19 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { concertService, getMinPrice } from "../../services/concertService";
+import { getMinPrice } from "../../services/concertService";
 import { fmt } from "../../utils/format";
 import type { Concert } from "../../types";
 
-export default function HeroCarousel() {
-  const [slides, setSlides] = useState<Concert[]>([]);
+// HeroCarousel — auto-sliding hero với fade transition
+// Nhận concerts qua prop từ Server Component (page.tsx)
+// Không tự fetch API, giúp tránh gọi thêm request từ phía client
+export default function HeroCarousel({ concerts }: { concerts: Concert[] }) {
+  const [slides] = [concerts.slice(0, 4)];
   const [cur, setCur] = useState(0);
   const [fading, setFading] = useState(false);
   const timer = useRef<NodeJS.Timeout | null>(null);
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
-
-  useEffect(() => {
-    concertService.getAll().then((concerts) => {
-      // Take first 4 concerts as hero slides
-      setSlides(concerts.slice(0, 4));
-    });
-  }, []);
 
   const go = useCallback((next: number) => {
     setFading(true);

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { APP_GUARD } from '@nestjs/core';
+import { LoggerModule } from 'nestjs-pino';
 import { JwtAuthGuard } from './common/guards/jwt.strategy';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,6 +19,40 @@ import { Guest } from './entities/guest.entity';
 
 @Module({
   imports: [
+    // Pino logger — pino-pretty ở dev cho dễ đọc, JSON thuần ở production
+    LoggerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => {
+        const isDev = config.get<string>('NODE_ENV') !== 'production';
+        return {
+          pinoHttp: {
+            // Mức log tối thiểu: debug ở dev, info ở production
+            level: isDev ? 'debug' : 'info',
+            transport: isDev
+              ? {
+                  target: 'pino-pretty',
+                  options: {
+                    colorize: true,
+                    singleLine: true,        // mỗi log 1 dòng, dễ đọc hơn
+                    translateTime: 'HH:MM:ss', // giờ local thay vì epoch
+                    ignore: 'pid,hostname',  // bỏ bớt trường ít dùng
+                  },
+                }
+              : undefined, // production — JSON thuần để đẩy vào Datadog/Loki
+            // Ghi đè serializer mặc định để request log gọn hơn
+            serializers: {
+              req: (req) => ({ method: req.method, url: req.url }),
+              res: (res) => ({ statusCode: res.statusCode }),
+            },
+            // Không log route health check để giảm noise
+            autoLogging: {
+              ignore: (req) => req.url === '/health',
+            },
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',

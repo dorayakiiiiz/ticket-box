@@ -1,49 +1,47 @@
-"use client";
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import {
-  Calendar,
-  Clock,
-  MapPin,
-  Users,
-  CheckCircle,
-  ChevronLeft,
-  ArrowRight,
-} from "lucide-react";
-import {
-  concertService,
-  getMinPrice,
-  getSoldPercent,
-} from "../../../services/concertService";
-import { SoldBar } from "../../../components/concert/EventCards";
+// Server Component, không dùng "use client"
+// Dùng ISR với revalidate 60 giây theo từng route
+// Thông tin concert ít thay đổi nên cache ở server là hợp lý
+// Phần số vé cần real-time, tách riêng thành Client Component <TicketAvailability>
+import { notFound } from "next/navigation";
+import { Calendar, Clock, MapPin, Users, CheckCircle } from "lucide-react";
+import { getMinPrice } from "../../../services/concertService";
+import TicketAvailability from "../../../components/concert/TicketAvailability";
 import { fmt } from "../../../utils/format";
 import type { Concert } from "../../../types";
+import BackButton from "../../../components/concert/BackButton";
+import BookingButton from "../../../components/concert/BookingButton";
 
-export default function EventDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+// URL backend — nhất quán với homepage
+const API =
+  process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ??
+  "http://localhost:8080";
 
-  const [concert, setConcert] = useState<Concert | null>(null);
+// Fetch concert detail với ISR revalidate 60s
+async function getConcert(id: string): Promise<Concert | null> {
+  try {
+    const res = await fetch(`${API}/concerts/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
 
-  useEffect(() => {
-    if (!id) return;
-    concertService
-      .getById(id)
-      .then(setConcert)
-      .catch(() => {});
-  }, [id]);
+export default async function EventDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const concert = await getConcert(id);
 
-  if (!concert)
-    return (
-      <div className="min-h-screen pt-20 text-center text-gray-500">
-        Đang tải...
-      </div>
-    );
+  // 404 nếu không tìm thấy — Next.js tự render not-found page
+  if (!concert) notFound();
 
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
   const price = getMinPrice(concert);
-  const sold = getSoldPercent(concert);
   const dateStr = new Date(concert.date).toLocaleDateString("vi-VN", {
     weekday: "long",
     day: "2-digit",
@@ -57,6 +55,7 @@ export default function EventDetailPage() {
 
   return (
     <div className="min-h-screen">
+      {/* Hero cover — render server-side */}
       <div className="relative h-[52vh] overflow-hidden">
         {concert.coverImageUrl ? (
           <img
@@ -73,12 +72,10 @@ export default function EventDetailPage() {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/50 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#080808]/50 to-transparent" />
-        <button
-          onClick={() => router.back()}
-          className="absolute top-6 left-6 flex items-center gap-2 text-[11px] md:text-xs font-semibold text-white/60 hover:text-white uppercase tracking-widest transition-colors"
-        >
-          <ChevronLeft size={14} /> Trở về
-        </button>
+
+        {/* Back button — Client Component nhỏ vì cần router.back() */}
+        <BackButton />
+
         <div className="absolute bottom-6 left-6 md:left-12">
           <h1
             style={{ ...D, fontSize: "clamp(32px,5.5vw,72px)" }}
@@ -92,6 +89,7 @@ export default function EventDetailPage() {
 
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-12">
+          {/* ── Cột trái: Thông tin concert (server-side, ISR cache) ── */}
           <div>
             {/* Info bar */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
@@ -160,7 +158,7 @@ export default function EventDetailPage() {
               </div>
             )}
 
-            {/* Ticket types */}
+            {/* Ticket types — title + TicketAvailability Client Component */}
             {concert.ticketTypes?.length > 0 && (
               <div>
                 <h2
@@ -169,40 +167,18 @@ export default function EventDetailPage() {
                 >
                   Loại vé & Giá
                 </h2>
-                <div className="flex flex-col gap-2">
-                  {concert.ticketTypes.map((t) => {
-                    const remaining = t.totalQuantity - t.soldQuantity;
-                    return (
-                      <div
-                        key={t.id}
-                        className="flex items-center justify-between bg-[#0a0a0a] border border-[#222] px-4 py-3 hover:border-[#CCFF00]/20 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-3 h-3 shrink-0"
-                            style={{
-                              backgroundColor: t.colorCode || "#CCFF00",
-                            }}
-                          />
-                          <div>
-                            <div className="text-sm font-bold">{t.name}</div>
-                            <div className="text-[10px] text-gray-500">
-                              Còn {remaining} vé · Tối đa {t.maxPerUser}/người
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-sm font-black">
-                          {fmt(t.price)}đ
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* TicketAvailability là Client Component, poll SWR mỗi 5 giây.
+                    Chỉ phần số vé được cập nhật, không re-render lại toàn trang.
+                    fallbackTicketTypes là data từ Postgres, hiển thị ngay khi SWR chưa fetch xong. */}
+                <TicketAvailability
+                  concertId={concert.id}
+                  fallbackTicketTypes={concert.ticketTypes}
+                />
               </div>
             )}
           </div>
 
-          {/* Sticky CTA */}
+          {/* ── Cột phải: Sticky CTA (Client Component vì có router.push) ── */}
           <div>
             <div className="sticky top-20 bg-[#0a0a0a] border border-[#222] p-6">
               <div className="text-[10px] font-mono tracking-[0.2em] text-gray-500 uppercase mb-1">
@@ -211,8 +187,9 @@ export default function EventDetailPage() {
               <div style={D} className="text-4xl font-black text-white mb-1">
                 {fmt(price)}đ
               </div>
-              <SoldBar pct={sold} />
+
               <div className="border-t border-[#333] my-5" />
+
               <div className="flex flex-col gap-2 text-[11px] md:text-xs text-gray-400 mb-6">
                 {[
                   "Vé chính hãng từ ban tổ chức",
@@ -225,12 +202,10 @@ export default function EventDetailPage() {
                   </div>
                 ))}
               </div>
-              <button
-                onClick={() => router.push(`/booking/${concert.id}`)}
-                className="w-full bg-[#CCFF00] text-black font-black uppercase tracking-[0.12em] py-4 hover:bg-white transition-colors flex items-center justify-center gap-2"
-              >
-                Chọn khu vực & Mua vé <ArrowRight size={14} />
-              </button>
+
+              {/* BookingButton — Client Component nhỏ vì cần router.push */}
+              <BookingButton concertId={concert.id} />
+
               <button className="w-full mt-2 border border-[#333] text-sm md:text-base font-semibold py-3 text-gray-400 hover:text-white hover:border-white/30 transition-colors bg-transparent">
                 Thêm vào lịch nhắc
               </button>
