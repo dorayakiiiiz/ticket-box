@@ -1,71 +1,53 @@
-"use client";
-import { useState, useRef, useEffect } from "react";
+// Server Component — không có "use client"
+// Dùng ISR: fetch danh sách concert từ backend, revalidate mỗi 60 giây
+// Next.js build trang thành HTML tĩnh và cache lại ở server.
+// Mọi user đều nhận từ cache, không gọi DB mỗi request.
+// Sau 60 giây, Next.js tự rebuild lại trong nền nếu có dữ liệu mới.
 import Link from "next/link";
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Ticket,
-  Play,
-} from "lucide-react";
+import { ArrowRight, Ticket, Play } from "lucide-react";
 import HeroCarousel from "../components/concert/HeroCarousel";
-import {
-  SmallCard,
-  FeaturedCard,
-  TrendingCard,
-} from "../components/concert/EventCards";
-import {
-  concertService,
-  getMinPrice,
-  formatConcertDate,
-} from "../services/concertService";
+import { SmallCard, FeaturedCard } from "../components/concert/EventCards";
+import TickerBanner from "../components/concert/TickerBanner";
+import TrendingScroller from "../components/concert/TrendingScroller";
+import { getMinPrice, formatConcertDate } from "../services/concertService";
 import { fmt } from "../utils/format";
 import type { Concert } from "../types";
 
-export default function HomePage() {
-  const trendRef = useRef<HTMLDivElement>(null);
-  const [concerts, setConcerts] = useState<Concert[]>([]);
+// URL backend — dùng env var để hỗ trợ production deploy
+// Server Component chạy phía Node.js nên có thể dùng non-public var
+const API = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? 'http://localhost:8080';
 
-  useEffect(() => {
-    concertService.getAll().then(setConcerts);
-  }, []);
+// Fetch concerts với ISR revalidate 60s
+// Lỗi fetch thì trả về mảng rỗng, trang vẫn render bình thường
+async function getConcerts(): Promise<Concert[]> {
+  try {
+    const res = await fetch(`${API}/concerts`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  // Data được fetch server-side, cache theo ISR
+  const concerts = await getConcerts();
 
   const featured = concerts[0];
   const grid = concerts.slice(1, 5);
-
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
 
   return (
     <>
       <div className="-mt-14">
-        <HeroCarousel />
+        {/* HeroCarousel nhận concerts qua prop — không tự fetch */}
+        <HeroCarousel concerts={concerts} />
       </div>
 
-      {/* Ticker */}
-      <div className="bg-[#CCFF00] py-2 md:py-3 overflow-hidden">
-        <div
-          className="flex items-center gap-8 whitespace-nowrap"
-          style={{ animation: "ticker 32s linear infinite" }}
-        >
-          {[...Array(3)]
-            .flatMap(() =>
-              concerts
-                .slice(0, 5)
-                .flatMap((c) => [
-                  `🎤 ${c.name} · ${formatConcertDate(c.date)} · ${c.city}`,
-                  "★",
-                ]),
-            )
-            .map((t, i) => (
-              <span
-                key={i}
-                className="text-black text-[11px] font-black uppercase tracking-[0.1em] shrink-0"
-              >
-                {t}
-              </span>
-            ))}
-        </div>
-      </div>
+      {/* Ticker — Client Component, nhận concerts qua prop */}
+      <TickerBanner concerts={concerts} />
 
       {/* Events section */}
       <section className="max-w-[1400px] mx-auto px-6 md:px-12 pt-16 pb-8">
@@ -93,6 +75,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {featured && (
               <div className="lg:col-span-1 lg:row-span-2">
+                {/* EventCards không có "use client", render được hoàn toàn ở server */}
                 <FeaturedCard concert={featured} />
               </div>
             )}
@@ -107,54 +90,10 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Trending */}
-      <section className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-5 h-px bg-[#FF2D20]" />
-              <span className="text-[10px] md:text-xs font-mono tracking-[0.2em] text-[#FF2D20] uppercase">
-                Đang Hot
-              </span>
-            </div>
-            <h2
-              style={D}
-              className="text-4xl font-black uppercase italic tracking-tight"
-            >
-              TRENDING TUẦN NÀY
-            </h2>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() =>
-                trendRef.current?.scrollBy({ left: -260, behavior: "smooth" })
-              }
-              className="border border-[#333] p-2 hover:border-[#CCFF00]/40 hover:text-[#CCFF00] transition-all"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={() =>
-                trendRef.current?.scrollBy({ left: 260, behavior: "smooth" })
-              }
-              className="border border-[#333] p-2 hover:border-[#CCFF00]/40 hover:text-[#CCFF00] transition-all"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-        <div
-          ref={trendRef}
-          className="flex gap-3 overflow-x-auto pb-2"
-          style={{ scrollbarWidth: "none" }}
-        >
-          {concerts.map((c, i) => (
-            <TrendingCard key={c.id} concert={c} rank={i + 1} />
-          ))}
-        </div>
-      </section>
+      {/* Trending — Client Component vì cần useRef cho scroll */}
+      <TrendingScroller concerts={concerts} />
 
-      {/* Upcoming list */}
+      {/* Upcoming list — render server-side hoàn toàn */}
       <section className="max-w-[1400px] mx-auto px-6 md:px-12 py-8 border-t border-[#222]">
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
@@ -211,7 +150,7 @@ export default function HomePage() {
           ))}
       </section>
 
-      {/* Promo */}
+      {/* Promo — static, render server-side */}
       <section className="relative overflow-hidden mt-12">
         <img
           src="https://images.unsplash.com/photo-1563841930606-67e2bce48b78?w=1800&h=600&fit=crop&auto=format"
@@ -253,7 +192,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Category grid */}
+      {/* Category grid — static, render server-side */}
       <section className="max-w-[1400px] mx-auto px-6 md:px-12 py-16">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-5 h-px bg-[#CCFF00]" />

@@ -24,6 +24,12 @@ export const concertService = {
   },
 };
 
+// SWR fetcher cho availability endpoint — dùng apiClient (tự attach auth header)
+// Trả thẳng data để SWR cache theo URL key
+export const availabilityFetcher = (url: string) =>
+  apiClient.get(url).then((r) => r.data);
+
+
 // Helper: get cheapest ticket price from a concert
 export function getMinPrice(concert: Concert): number {
   if (!concert.ticketTypes?.length) return 0;

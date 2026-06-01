@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { X, MapPin, Calendar, Clock, Sparkles, Pencil, Music2 } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, Sparkles, Pencil, Music2, FileText, Upload, Loader2, CheckCircle, XCircle, Type } from 'lucide-react';
 import { adminService } from '../../services/adminService';
 import { fmt } from '../../utils/format';
-import type { Concert } from '../../types';
+import type { Concert, AiBioStatus } from '../../types';
 
 // --- Types & Constants ---
 
@@ -18,11 +18,15 @@ type FormState = {
   city: string;
   date: string;
   coverImageUrl: string;
+  aiBio: string;
 };
 
 const EMPTY_FORM: FormState = {
-  name: '', subtitle: '', description: '', venue: '', city: '', date: '', coverImageUrl: '',
+  name: '', subtitle: '', description: '', venue: '', city: '', date: '', coverImageUrl: '', aiBio: '',
 };
+
+// Kích thước tối đa file PDF cho phép upload
+const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
 
 const inputCls =
   'w-full bg-white border border-slate-200 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all duration-200';
@@ -72,6 +76,16 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // AI Bio: 'manual' = nhập tay, 'pdf' = upload PDF
+  const [bioMode, setBioMode] = useState<'manual' | 'pdf'>('manual');
+
+  // PDF upload state (chỉ dùng khi bioMode === 'pdf' và concert đã tồn tại)
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [bioStatus, setBioStatus] = useState<AiBioStatus>('IDLE');
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => {
     if (concert && mode !== 'create') {
       setForm({
@@ -82,9 +96,15 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         city: concert.city,
         date: concert.date ? new Date(concert.date).toISOString().slice(0, 16) : '',
         coverImageUrl: concert.coverImageUrl ?? '',
+        aiBio: concert.aiBio ?? '',
       });
+      setBioStatus(concert.aiBioStatus ?? 'IDLE');
+      // Nếu đã có AI Bio thì mở tab nhập tay, chưa có thì mở PDF
+      setBioMode(concert.aiBio ? 'manual' : 'pdf');
     } else {
       setForm(EMPTY_FORM);
+      setBioMode('manual');
+      setBioStatus('IDLE');
     }
   }, [concert, mode]);
 
@@ -106,6 +126,8 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         city: form.city,
         date: form.date,
         coverImageUrl: form.coverImageUrl || undefined,
+        // Chỉ gửi aiBio khi nhập tay, không ghi đè nếu đang dùng PDF mode
+        ...(bioMode === 'manual' && form.aiBio ? { aiBio: form.aiBio } : {}),
       };
       if (mode === 'edit' && concert) {
         await adminService.updateConcert(concert.id, payload);
@@ -127,6 +149,47 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
+
+  // Handler upload PDF — chỉ hoạt động khi concert đã được tạo (có id)
+  const handlePdfUpload = async (file: File) => {
+    if (!concert?.id) return;
+    setUploadError(null);
+
+    if (!file.name.toLowerCase().endsWith('.pdf') || (file.type && file.type !== 'application/pdf')) {
+      setUploadError('Chỉ chấp nhận file PDF');
+      return;
+    }
+    if (file.size > MAX_PDF_SIZE) {
+      setUploadError('File không được vượt quá 10MB');
+      return;
+    }
+
+    setIsUploading(true);
+    setBioStatus('PROCESSING');
+    try {
+      await adminService.uploadBio(concert.id, file);
+      // Poll trạng thái mỗi 3 giây cho đến khi DONE/FAILED
+      const poll = setInterval(async () => {
+        try {
+          const updated = await adminService.getConcerts();
+          const c = updated.find(x => x.id === concert.id);
+          if (c && (c.aiBioStatus === 'DONE' || c.aiBioStatus === 'FAILED')) {
+            clearInterval(poll);
+            setBioStatus(c.aiBioStatus);
+            if (c.aiBioStatus === 'DONE') setForm(prev => ({ ...prev, aiBio: c.aiBio ?? '' }));
+            setIsUploading(false);
+          }
+        } catch { clearInterval(poll); setIsUploading(false); }
+      }, 3000);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setUploadError(msg ?? 'Upload thất bại, thử lại sau');
+      setBioStatus('FAILED');
+      setIsUploading(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = '';
+    }
+  };
+
 
   // --- Header config ---
   const HEADER: Record<ModalMode, { icon: React.ReactNode; title: string; desc: string }> = {
@@ -330,9 +393,166 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
               <input id="modal-cover" type="url" value={form.coverImageUrl} onChange={set('coverImageUrl')} placeholder="https://..." className={inputCls} />
             </div>
 
+            {/* ── AI Bio Section ── */}
+            <div className="border border-slate-200 overflow-hidden">
+              {/* Header + Tab switcher */}
+              <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={13} className="text-blue-400" />
+                  <span className="text-sm font-semibold text-slate-700">AI Tiểu sử nghệ sĩ</span>
+                  <span className="text-[10px] text-slate-400 font-normal">(tuỳ chọn)</span>
+                </div>
+                {/* Tab switcher */}
+                <div className="flex items-center gap-1 bg-white border border-slate-200 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setBioMode('manual')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold transition-all duration-150 ${
+                      bioMode === 'manual'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    <Type size={11} /> Nhập tay
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBioMode('pdf')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold transition-all duration-150 ${
+                      bioMode === 'pdf'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    <FileText size={11} /> Upload PDF
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4">
+                {/* Tab: Nhập tay */}
+                {bioMode === 'manual' && (
+                  <div className="flex flex-col gap-1.5">
+                    <textarea
+                      id="modal-aibio"
+                      value={form.aiBio}
+                      onChange={set('aiBio')}
+                      rows={4}
+                      placeholder="Nhập tiểu sử nghệ sĩ... (hoặc để trống và dùng AI để tự động tóm tắt từ PDF)"
+                      className={`${inputCls} resize-none`}
+                    />
+                    <p className="text-[11px] text-slate-400">Nội dung này sẽ hiển thị trong trang chi tiết concert.</p>
+                  </div>
+                )}
+
+                {/* Tab: Upload PDF */}
+                {bioMode === 'pdf' && (
+                  <div>
+                    {/* Chỉ upload được khi concert đã tồn tại */}
+                    {!concert?.id && (
+                      <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 px-3.5 py-3 text-xs text-amber-700">
+                        <span className="shrink-0 mt-0.5">⚠️</span>
+                        <span>Hãy <strong>tạo concert trước</strong>, sau đó mở lại để upload PDF. AI sẽ tự động tóm tắt tiểu sử nghệ sĩ.</span>
+                      </div>
+                    )}
+
+                    {/* PROCESSING */}
+                    {concert?.id && (bioStatus === 'PROCESSING' || isUploading) && (
+                      <div className="flex flex-col items-center gap-3 py-6">
+                        <Loader2 size={24} className="animate-spin text-blue-500" />
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-slate-700">AI đang xử lý...</p>
+                          <p className="text-xs text-slate-400 mt-0.5">Đọc PDF và tóm tắt bằng AI, thường mất 10–30 giây</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* DONE */}
+                    {concert?.id && bioStatus === 'DONE' && !isUploading && (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 text-emerald-600 text-sm font-semibold">
+                          <CheckCircle size={15} /> AI Bio đã sẵn sàng
+                        </div>
+                        {form.aiBio && (
+                          <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 px-3 py-2.5 italic leading-relaxed line-clamp-3">
+                            {form.aiBio}
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => pdfInputRef.current?.click()}
+                          className="self-start text-[11px] text-blue-500 hover:text-blue-700 font-medium underline transition-colors"
+                        >
+                          Upload PDF khác
+                        </button>
+                      </div>
+                    )}
+
+                    {/* IDLE / FAILED — Drop zone */}
+                    {concert?.id && (bioStatus === 'IDLE' || bioStatus === 'FAILED') && !isUploading && (
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                        onDragLeave={() => setIsDragging(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                          const f = e.dataTransfer.files[0];
+                          if (f) handlePdfUpload(f);
+                        }}
+                        className={`flex flex-col items-center gap-3 py-7 border-2 border-dashed cursor-pointer transition-all duration-200 ${
+                          isDragging
+                            ? 'border-blue-400 bg-blue-50'
+                            : bioStatus === 'FAILED'
+                            ? 'border-red-300 bg-red-50'
+                            : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                        }`}
+                        onClick={() => pdfInputRef.current?.click()}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === 'Enter' && pdfInputRef.current?.click()}
+                        aria-label="Khu vực kéo thả hoặc chọn file PDF"
+                      >
+                        {bioStatus === 'FAILED' ? (
+                          <XCircle size={22} className="text-red-400" />
+                        ) : (
+                          <Upload size={22} className={isDragging ? 'text-blue-500' : 'text-slate-300'} />
+                        )}
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-slate-600">
+                            {bioStatus === 'FAILED' ? 'Xử lý thất bại — thử lại' : 'Kéo thả PDF vào đây'}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">hoặc <span className="text-blue-500 underline">chọn file</span> · tối đa 10MB</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Lỗi upload */}
+                    {uploadError && (
+                      <p role="alert" className="mt-2 text-[11px] text-red-500 font-medium">{uploadError}</p>
+                    )}
+
+                    {/* Hidden file input */}
+                    <input
+                      ref={pdfInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      aria-hidden="true"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handlePdfUpload(f);
+                        e.target.value = '';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
             {error && (
               <div role="alert" className="bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium">{error}</div>
             )}
+
 
             <div className="flex gap-3 pt-1">
               <button

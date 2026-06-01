@@ -14,6 +14,7 @@ type CreateConcertPayload = {
 
 type UpdateConcertPayload = Partial<CreateConcertPayload> & {
   status?: string;
+  aiBio?: string;
 };
 
 // Fetcher dùng cho SWR — trả về data trực tiếp

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, UploadedFile, UseInterceptors, BadRequestException, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req, UploadedFile, UseInterceptors, BadRequestException, HttpCode, HttpStatus, Header } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConcertService } from './concert.service';
@@ -30,6 +30,15 @@ export class ConcertController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.concertService.findOne(id);
+  }
+
+  // Endpoint đọc số vé còn lại từ Redis — dùng bởi SWR client poll 5 giây
+  // Cache-Control: s-maxage=5 cho CDN/proxy hấp thụ thundering herd khi concert hot
+  @Public()
+  @Get(':id/availability')
+  @Header('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=10')
+  getAvailability(@Param('id') id: string) {
+    return this.concertService.getAvailability(id);
   }
 
   @Post()

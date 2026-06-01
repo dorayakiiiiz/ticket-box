@@ -20,21 +20,21 @@ export default function AdminSidebar() {
 
   return (
     <aside className="w-[260px] shrink-0 bg-white border-r border-slate-200 flex flex-col min-h-screen shadow-sm">
-      {/* Logo */}
+      {/* Logo — click để quay về trang chính */}
       <div className="px-6 py-5 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5 group w-fit">
           <div className="w-8 h-8 rounded-lg bg-[#111] flex items-center justify-center">
             <span className="text-[#CCFF00] font-black text-xs">Z</span>
           </div>
           <div>
-            <div className="text-[15px] font-bold text-slate-900 tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <div className="text-[15px] font-bold text-slate-900 tracking-tight group-hover:text-slate-700 transition-colors" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
               Ticket<span className="text-[#CCFF00]">Z</span>
             </div>
-            <div className="text-[10px] font-medium text-slate-400 tracking-wide uppercase">
+            <div className="text-[10px] font-medium text-slate-400 tracking-wide uppercase group-hover:text-slate-500 transition-colors">
               Admin Panel
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Nav items */}

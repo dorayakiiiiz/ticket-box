@@ -2,12 +2,20 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  
+  const app = await NestFactory.create(AppModule, {
+    // Tắt logger mặc định của NestJS, Pino sẽ thay thế sau khi app init
+    bufferLogs: true,
+  });
+
+  // Dùng PinoLogger làm logger chính thức của toàn bộ NestJS
+  // bufferLogs: true giữ các log bootstrap lại, flush sau khi Pino sẵn sàng
+  app.useLogger(app.get(Logger));
+
   app.enableCors();
-  
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

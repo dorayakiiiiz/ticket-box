@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Calendar, MapPin, RefreshCw, Music2, Search, Pencil, Trash2, X } from 'lucide-react';
 import { adminService } from '../../services/adminService';
-import UploadPdfButton from '../../components/admin/UploadPdfButton';
 import ConcertModal from '../../components/admin/ConcertModal';
 import type { Concert } from '../../types';
 
@@ -198,8 +197,8 @@ export default function AdminPage() {
       {!isLoading && !error && filteredConcerts.length > 0 && (
         <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
           {/* Table header */}
-          <div className="grid grid-cols-[1fr_140px_140px_100px_180px_70px] bg-slate-50 border-b border-slate-200 px-6 py-3">
-            {['Tên concert', 'Thành phố', 'Ngày diễn', 'Trạng thái', 'AI Bio', ''].map(h => (
+          <div className="grid grid-cols-[1fr_140px_140px_100px_70px] bg-slate-50 border-b border-slate-200 px-6 py-3">
+            {['Tên concert', 'Thành phố', 'Ngày diễn', 'Trạng thái', ''].map(h => (
               <div key={h} className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">{h}</div>
             ))}
           </div>
@@ -208,7 +207,7 @@ export default function AdminPage() {
           {filteredConcerts.map(c => (
             <div
               key={c.id}
-              className="grid grid-cols-[1fr_140px_140px_100px_180px_70px] px-6 py-4 border-b border-slate-100 last:border-b-0 hover:bg-blue-50/30 transition-colors duration-200 items-center cursor-pointer"
+              className="grid grid-cols-[1fr_140px_140px_100px_70px] px-6 py-4 border-b border-slate-100 last:border-b-0 hover:bg-blue-50/30 transition-colors duration-200 items-center cursor-pointer"
               onClick={() => openView(c)}
             >
               {/* Tên */}
@@ -234,11 +233,6 @@ export default function AdminPage() {
                 <span className={`text-[11px] font-semibold border rounded-full px-2.5 py-1 ${STATUS_STYLE[c.status] ?? ''}`}>
                   {STATUS_LABEL[c.status] ?? c.status}
                 </span>
-              </div>
-
-              {/* AI Bio upload */}
-              <div onClick={(e) => e.stopPropagation()}>
-                <UploadPdfButton concertId={c.id} initialStatus={c.aiBioStatus} onStatusChange={fetchConcerts} />
               </div>
 
               {/* Actions */}
