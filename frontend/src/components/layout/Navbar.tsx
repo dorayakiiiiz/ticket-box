@@ -8,8 +8,7 @@ import { useEffect } from "react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const { user, isAuthenticated, initialize, logout } = useAuthStore();
+  const { user, isAuthenticated, initialize, logout, isAuthModalOpen, openAuthModal, closeAuthModal } = useAuthStore();
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
 
   useEffect(() => {
@@ -81,7 +80,7 @@ export default function Navbar() {
               </div>
             ) : (
               <button
-                onClick={() => setLoginOpen(true)}
+                onClick={openAuthModal}
                 className="hidden md:block text-[11px] md:text-sm font-semibold uppercase tracking-[0.12em] text-gray-400 hover:text-white transition-colors"
               >
                 Đăng nhập
@@ -118,7 +117,7 @@ export default function Navbar() {
             </Link>
             <button
               onClick={() => {
-                setLoginOpen(true);
+                openAuthModal();
                 setOpen(false);
               }}
               className="text-left hover:text-white"
@@ -128,7 +127,7 @@ export default function Navbar() {
           </div>
         )}
       </nav>
-      {loginOpen && <AuthModal onClose={() => setLoginOpen(false)} />}
+      {isAuthModalOpen && <AuthModal onClose={closeAuthModal} />}
     </>
   );
 }

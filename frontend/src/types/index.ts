@@ -79,3 +79,19 @@ export type ConcertAvailability = {
   updatedAt: string;
   ticketTypes: TicketAvailabilityItem[];
 };
+
+// ─── Phase 3: Booking Types ─────────────────────────────────────────────────
+
+// Response của POST /booking (HTTP 202) — trả về ngay sau khi giữ vé thành công
+export type BookingResponse = {
+  status: 'SUCCESS';
+  message: string;
+  jobId: string;
+  idempotencyKey: string;
+};
+
+// Response của GET /booking/status?key=xxx — FE polling mỗi 2 giây
+export type BookingStatusResponse = {
+  status: 'processing' | 'completed' | 'failed';
+  orderId: string | null;
+};

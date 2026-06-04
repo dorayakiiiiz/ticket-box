@@ -13,15 +13,22 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isAuthModalOpen: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
   initialize: () => void;
+  openAuthModal: () => void;
+  closeAuthModal: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   isAuthenticated: false,
+  isAuthModalOpen: false,
+
+  openAuthModal: () => set({ isAuthModalOpen: true }),
+  closeAuthModal: () => set({ isAuthModalOpen: false }),
 
   login: (user, token) => {
     // Lưu vào Cookie (hỗ trợ cho Server Components lấy được token)

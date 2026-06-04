@@ -1,54 +1,92 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Clock, ChevronLeft, AlertCircle, X } from 'lucide-react';
+import { Clock, ChevronLeft, AlertCircle, X, Loader2, CheckCircle } from 'lucide-react';
 import { concertService } from '@/services/concertService';
-import { EventInfo, ZoneInfo } from '@/types';
+import type { Concert, TicketType } from '@/types';
 import { fmt } from '@/utils/format';
 
 export default function CheckoutPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const id = Number(params.id);
-  const zoneId = searchParams.get('zone');
+  const concertId = params.id as string;
+  const ticketTypeId = searchParams.get('ticketTypeId');
   const qty = Number(searchParams.get('qty') || 1);
+  const orderId = searchParams.get('orderId');
 
-  const [event, setEvent] = useState<EventInfo | null>(null);
-  const [zone, setZone] = useState<ZoneInfo | null>(null);
+  const [concert, setConcert] = useState<Concert | null>(null);
+  const [ticketType, setTicketType] = useState<TicketType | null>(null);
   const [secs, setSecs] = useState(15 * 60);
   const [pay, setPay] = useState<"momo" | "vnpay" | "card">("momo");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
+  
+  const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'success'>('idle');
 
   useEffect(() => {
-    if (!id || !zoneId) return;
+    if (!concertId || !ticketTypeId) return;
     const fetchEvent = async () => {
-      const [data, zData] = await Promise.all([
-        concertService.getEventById(id),
-        concertService.getZones()
-      ]);
-      if (data) setEvent(data);
-      if (zData) setZone(zData.find(z => z.id === zoneId) || null);
+      try {
+        const data = await concertService.getById(concertId);
+        if (data) {
+          setConcert(data);
+          const tt = data.ticketTypes.find(t => t.id === ticketTypeId);
+          if (tt) setTicketType(tt);
+        }
+      } catch (e) {
+        // Handle error
+      }
     };
     fetchEvent();
-  }, [id, zoneId]);
+  }, [concertId, ticketTypeId]);
 
   useEffect(() => {
     const timerId = setInterval(() => setSecs(s => Math.max(0, s - 1)), 1000);
     return () => clearInterval(timerId);
   }, []);
 
-  if (!event || !zone) return <div className="min-h-screen pt-20 text-center text-gray-500">Đang tải...</div>;
+  if (!concert || !ticketType) return <div className="min-h-screen pt-20 text-center text-gray-500">Đang tải...</div>;
 
   const mm = String(Math.floor(secs / 60)).padStart(2, "0");
   const ss = String(secs % 60).padStart(2, "0");
-  const total = zone.price * qty;
+  const total = ticketType.price * qty;
   const fee = Math.round(total * 0.02);
   const urgent = secs < 60;
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
+  const dateStr = new Date(concert.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = new Date(concert.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+  // Handle Payment (Simulate redirect for Phase 4)
+  const handlePayment = () => {
+    if (!name || !email || !agreed) return;
+    setPaymentState('processing');
+    
+    // TODO: [PHASE 4] Gọi API lấy URL thanh toán (VNPAY/MoMo) và redirect trình duyệt
+    // window.location.href = result.paymentUrl;
+    
+    // Giả lập redirect thành công sau 2s
+    setTimeout(() => {
+      setPaymentState('success');
+    }, 2000);
+  };
+
+  if (paymentState === 'success') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] p-6 text-center">
+        <CheckCircle size={80} className="text-[#CCFF00] mb-6" />
+        <h1 style={D} className="text-4xl font-black uppercase italic mb-2">Thanh toán thành công!</h1>
+        <p className="text-gray-400 mb-2">Mã đơn hàng: <span className="font-mono text-white">{orderId?.slice(0, 8)}</span></p>
+        <p className="text-gray-500 text-sm mb-8">Vé điện tử (QR Code) đã được gửi vào email {email}</p>
+        <div className="flex gap-4">
+          <button onClick={() => router.push('/')} className="px-6 py-3 border border-[#333] hover:border-[#CCFF00] transition-colors uppercase font-bold text-sm tracking-wider">Trang chủ</button>
+          <button onClick={() => router.push('/my-tickets')} className="px-6 py-3 bg-[#CCFF00] text-black font-black uppercase tracking-wider text-sm hover:bg-white transition-colors">Xem vé của tôi</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -106,10 +144,14 @@ export default function CheckoutPage() {
               <span className="text-[11px] md:text-xs text-gray-400 leading-relaxed">Tôi đã đọc và đồng ý với <span className="text-[#CCFF00]">Điều khoản sử dụng</span> và <span className="text-[#CCFF00]">Chính sách hoàn tiền</span> của TicketZ.</span>
             </button>
 
-            <button onClick={() => { if (name && email && agreed) router.push(`/ticket/${event.id}?zone=${zone.id}&qty=${qty}&holderName=${encodeURIComponent(name)}`); }}
-              disabled={!name || !email || !agreed}
+            <button onClick={handlePayment}
+              disabled={!name || !email || !agreed || paymentState === 'processing'}
               className="w-full bg-[#CCFF00] text-black font-black uppercase tracking-[0.12em] py-4 hover:bg-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-              Xác nhận & Thanh toán {fmt(total + fee)}đ →
+              {paymentState === 'processing' ? (
+                <><Loader2 size={16} className="animate-spin" /> Đang chuyển hướng...</>
+              ) : (
+                <>Xác nhận & Thanh toán {fmt(total + fee)}đ →</>
+              )}
             </button>
           </div>
 
@@ -118,11 +160,11 @@ export default function CheckoutPage() {
             <div className="sticky top-20">
               <div className="bg-[#0a0a0a] border border-[#222] p-5 mb-3">
                 <div className="text-[10px] md:text-xs font-mono tracking-[0.2em] text-gray-500 uppercase mb-3">Thông tin đặt vé</div>
-                <div style={D} className="text-xl font-black uppercase italic mb-1">{event.name}</div>
-                <div className="text-[11px] md:text-xs text-gray-400 mb-4">{event.date} · {event.time} · {event.venue}</div>
+                <div style={D} className="text-xl font-black uppercase italic mb-1">{concert.name}</div>
+                <div className="text-[11px] md:text-xs text-gray-400 mb-4">{dateStr} · {timeStr} · {concert.venue}</div>
                 <div className="border-t border-[#333] pt-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <div><div className="text-sm md:text-base font-bold">{zone.name}</div><div className="text-[10px] md:text-xs text-gray-500">{zone.type} · x{qty}</div></div>
+                    <div><div className="text-sm md:text-base font-bold">{ticketType.name}</div><div className="text-[10px] md:text-xs text-gray-500">x{qty}</div></div>
                     <div className="text-sm md:text-base font-bold">{fmt(total)}đ</div>
                   </div>
                   <div className="flex justify-between text-[11px] md:text-xs text-gray-400">

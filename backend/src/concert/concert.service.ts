@@ -3,7 +3,6 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
-  Inject,
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,7 +15,7 @@ import { Concert } from '../entities/concert.entity';
 import { TicketType } from '../entities/ticket-type.entity';
 import { UserRole } from '../entities/user.entity';
 import { CreateConcertDto, UpdateConcertDto } from './dto/concert.dto';
-import { REDIS_CLIENT } from '../infrastructure/redis.provider';
+import { InjectRedis } from '@nestjs-modules/ioredis';
 
 const AI_BIO_QUEUE = 'ticketbox.concert.ai-bio';
 
@@ -32,7 +31,7 @@ export class ConcertService implements OnApplicationBootstrap {
     @InjectRepository(Concert) private readonly concertRepo: Repository<Concert>,
     @InjectRepository(TicketType) private readonly ticketTypeRepo: Repository<TicketType>,
     @InjectQueue(AI_BIO_QUEUE) private readonly aiBioQueue: Queue,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis,
   ) {}
 
   // ─── Lifecycle Hook ──────────────────────────────────────────────────────────

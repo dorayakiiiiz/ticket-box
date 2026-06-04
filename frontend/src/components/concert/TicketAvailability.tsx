@@ -96,7 +96,7 @@ export default function TicketAvailability({
     <div>
       {/* Badge khi SWR lỗi nhưng vẫn có fallback data */}
       {error && data && (
-        <div className="text-[10px] text-gray-500 italic mb-2 text-right">
+        <div className="text-[10px] md:text-xs text-gray-500 italic mb-2 text-right">
           Đang cập nhật...
         </div>
       )}
@@ -131,8 +131,8 @@ export default function TicketAvailability({
                   style={{ backgroundColor: t.colorCode || "#CCFF00" }}
                 />
                 <div>
-                  <div className="text-sm font-bold">{t.name}</div>
-                  <div className="text-[10px] text-gray-500">
+                  <div className="text-sm md:text-base font-bold">{t.name}</div>
+                  <div className="text-[10px] md:text-xs text-gray-500">
                     {t.soldOut ? (
                       <span className="text-[#FF2D20] font-semibold">
                         Hết vé
@@ -145,7 +145,7 @@ export default function TicketAvailability({
                   </div>
                 </div>
               </div>
-              <div className="text-sm font-black">
+              <div className="text-sm md:text-base font-black">
                 {/* Giá lấy từ fallbackTicketTypes vì availability response không trả price */}
                 {fmt(
                   fallbackTicketTypes.find((ft) => ft.id === t.id)?.price ?? 0,
