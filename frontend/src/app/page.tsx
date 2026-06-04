@@ -84,7 +84,7 @@ export default async function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="py-20 text-center text-gray-500 text-sm">
+          <div className="py-20 text-center text-gray-500 text-sm md:text-base">
             Đang tải sự kiện...
           </div>
         )}
@@ -131,19 +131,19 @@ export default async function HomePage() {
               <div className="flex-1 min-w-0">
                 <h3
                   style={D}
-                  className="font-black uppercase text-sm tracking-wide truncate group-hover:text-[#CCFF00] transition-colors"
+                  className="font-black uppercase text-sm md:text-base tracking-wide truncate group-hover:text-[#CCFF00] transition-colors"
                 >
                   {c.name}
                 </h3>
-                <div className="text-[11px] text-gray-500 mt-0.5">
+                <div className="text-[11px] md:text-xs text-gray-500 mt-0.5">
                   {c.venue}, {c.city}
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-sm font-bold">{fmt(getMinPrice(c))}đ</div>
-                <div className="text-[10px] text-gray-500">Từ</div>
+                <div className="text-sm md:text-base font-bold">{fmt(getMinPrice(c))}đ</div>
+                <div className="text-[10px] md:text-xs text-gray-500">Từ</div>
               </div>
-              <div className="hidden md:block shrink-0 border border-[#CCFF00]/30 text-[#CCFF00] text-[10px] font-black uppercase tracking-widest px-4 py-1.5 group-hover:bg-[#CCFF00] group-hover:text-black transition-all">
+              <div className="hidden md:block shrink-0 border border-[#CCFF00]/30 text-[#CCFF00] text-[10px] md:text-xs font-black uppercase tracking-widest px-4 py-1.5 group-hover:bg-[#CCFF00] group-hover:text-black transition-all">
                 Mua →
               </div>
             </Link>

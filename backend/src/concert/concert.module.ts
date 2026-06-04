@@ -8,7 +8,7 @@ import { ConcertService } from './concert.service';
 import { ConcertController } from './concert.controller';
 import { AiBioProcessor } from './ai-bio.processor';
 import { AiProviderModule } from '../ai-provider/ai-provider.module';
-import { RedisProvider } from '../infrastructure/redis.provider';
+
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { RedisProvider } from '../infrastructure/redis.provider';
     BullModule.registerQueue({ name: 'ticketbox.concert.ai-bio' }),
     AiProviderModule,
   ],
-  providers: [ConcertService, AiBioProcessor, RedisProvider],
+  providers: [ConcertService, AiBioProcessor],
   controllers: [ConcertController],
 })
 export class ConcertModule { }

@@ -27,6 +27,15 @@ export class Order {
   @Column({ nullable: true })
   paymentId: string; // VNPAY/MoMo transaction id
 
+  // Idempotency Key — UUID từ FE, dùng để liên kết booking request với order
+  // FE polling GET /booking/status?key=xxx sẽ tìm order theo key này
+  @Column({ nullable: true, unique: true })
+  idempotencyKey: string;
+
+  // Số lượng vé trong đơn hàng — ghi lại để truy vết
+  @Column({ default: 1 })
+  quantity: number;
+
   @ManyToOne(() => User, user => user.orders)
   user: User;
 

@@ -83,7 +83,7 @@ export default async function EventDetailPage({
           >
             {concert.name}
           </h1>
-          <p className="text-sm text-white/45 mt-2">{concert.subtitle}</p>
+          <p className="text-sm md:text-base text-white/45 mt-2">{concert.subtitle}</p>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export default async function EventDetailPage({
               >
                 Về chương trình
               </h2>
-              <p className="text-sm text-gray-400 leading-relaxed">
+              <p className="text-sm md:text-base text-gray-400 leading-relaxed">
                 {concert.description}
               </p>
             </div>
@@ -152,7 +152,7 @@ export default async function EventDetailPage({
                 >
                   Giới thiệu nghệ sĩ
                 </h2>
-                <p className="text-sm text-gray-400 leading-relaxed">
+                <p className="text-sm md:text-base text-gray-400 leading-relaxed">
                   {concert.aiBio}
                 </p>
               </div>
@@ -181,7 +181,7 @@ export default async function EventDetailPage({
           {/* ── Cột phải: Sticky CTA (Client Component vì có router.push) ── */}
           <div>
             <div className="sticky top-20 bg-[#0a0a0a] border border-[#222] p-6">
-              <div className="text-[10px] font-mono tracking-[0.2em] text-gray-500 uppercase mb-1">
+              <div className="text-[10px] md:text-xs font-mono tracking-[0.2em] text-gray-500 uppercase mb-1">
                 Vé từ
               </div>
               <div style={D} className="text-4xl font-black text-white mb-1">
