@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
@@ -21,6 +22,8 @@ import { TicketType } from './entities/ticket-type.entity';
 import { Order } from './entities/order.entity';
 import { Ticket } from './entities/ticket.entity';
 import { Guest } from './entities/guest.entity';
+import { PaymentModule } from './payment/payment.module';
+import { TicketModule } from './ticket/ticket.module';
 
 @Module({
   imports: [
@@ -121,6 +124,9 @@ import { Guest } from './entities/guest.entity';
     AuthModule,
     ConcertModule,
     BookingModule,
+    PaymentModule,
+    TicketModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
