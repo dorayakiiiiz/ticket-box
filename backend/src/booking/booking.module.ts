@@ -20,6 +20,8 @@ import { Order } from '../entities/order.entity';
  * - BookingService: logic nghiệp vụ
  * - OrderProcessor: BullMQ Worker xử lý tạo order trong Postgres
  */
+import { CronService } from './cron.service';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([TicketType, Order]),
@@ -27,6 +29,6 @@ import { Order } from '../entities/order.entity';
     TicketRedisModule,
   ],
   controllers: [BookingController],
-  providers: [BookingService, OrderProcessor],
+  providers: [BookingService, OrderProcessor, CronService],
 })
 export class BookingModule {}

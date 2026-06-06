@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Clock, ChevronLeft, AlertCircle, X, Loader2, CheckCircle } from 'lucide-react';
+import { Clock, ChevronLeft, AlertCircle, X, Loader2, AlertTriangle } from 'lucide-react';
 import { concertService } from '@/services/concertService';
+import { paymentService } from '@/services/paymentService';
 import type { Concert, TicketType } from '@/types';
 import { fmt } from '@/utils/format';
 
@@ -18,13 +19,14 @@ export default function CheckoutPage() {
   const [concert, setConcert] = useState<Concert | null>(null);
   const [ticketType, setTicketType] = useState<TicketType | null>(null);
   const [secs, setSecs] = useState(15 * 60);
-  const [pay, setPay] = useState<"momo" | "vnpay" | "card">("momo");
+  const [pay, setPay] = useState<"momo" | "vnpay" | "card">("vnpay");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
   
-  const [paymentState, setPaymentState] = useState<'idle' | 'processing' | 'success'>('idle');
+  const [paymentState, setPaymentState] = useState<'idle' | 'processing'>('idle');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!concertId || !ticketTypeId) return;
@@ -55,38 +57,42 @@ export default function CheckoutPage() {
   const total = ticketType.price * qty;
   const fee = Math.round(total * 0.02);
   const urgent = secs < 60;
+  const expired = secs === 0;
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
   const dateStr = new Date(concert.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const timeStr = new Date(concert.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-  // Handle Payment (Simulate redirect for Phase 4)
-  const handlePayment = () => {
-    if (!name || !email || !agreed) return;
+  // Handle Payment — Gọi API tạo URL thanh toán và redirect sang cổng
+  const handlePayment = async () => {
+    if (!name || !email || !agreed || !orderId) return;
+    setError(null);
     setPaymentState('processing');
-    
-    // TODO: [PHASE 4] Gọi API lấy URL thanh toán (VNPAY/MoMo) và redirect trình duyệt
-    // window.location.href = result.paymentUrl;
-    
-    // Giả lập redirect thành công sau 2s
-    setTimeout(() => {
-      setPaymentState('success');
-    }, 2000);
-  };
 
-  if (paymentState === 'success') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0a0a0a] p-6 text-center">
-        <CheckCircle size={80} className="text-[#CCFF00] mb-6" />
-        <h1 style={D} className="text-4xl font-black uppercase italic mb-2">Thanh toán thành công!</h1>
-        <p className="text-gray-400 mb-2">Mã đơn hàng: <span className="font-mono text-white">{orderId?.slice(0, 8)}</span></p>
-        <p className="text-gray-500 text-sm mb-8">Vé điện tử (QR Code) đã được gửi vào email {email}</p>
-        <div className="flex gap-4">
-          <button onClick={() => router.push('/')} className="px-6 py-3 border border-[#333] hover:border-[#CCFF00] transition-colors uppercase font-bold text-sm tracking-wider">Trang chủ</button>
-          <button onClick={() => router.push('/my-tickets')} className="px-6 py-3 bg-[#CCFF00] text-black font-black uppercase tracking-wider text-sm hover:bg-white transition-colors">Xem vé của tôi</button>
-        </div>
-      </div>
-    );
-  }
+    try {
+      // Map payment method FE → Backend enum
+      const methodMap: Record<string, 'VNPAY' | 'MOMO'> = {
+        vnpay: 'VNPAY',
+        momo: 'MOMO',
+      };
+      const paymentMethod = methodMap[pay];
+
+      if (!paymentMethod) {
+        setError('Phương thức thanh toán này chưa được hỗ trợ. Vui lòng chọn VNPay hoặc MoMo.');
+        setPaymentState('idle');
+        return;
+      }
+
+      const result = await paymentService.createPaymentUrl(orderId, paymentMethod);
+      // Redirect trình duyệt sang cổng thanh toán (VNPay/MoMo sandbox)
+      window.location.href = result.paymentUrl;
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        'Không thể tạo liên kết thanh toán. Vui lòng thử lại.';
+      setError(message);
+      setPaymentState('idle');
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -100,6 +106,25 @@ export default function CheckoutPage() {
       </div>
 
       <div className="max-w-[1100px] mx-auto px-6 md:px-12 py-10">
+        {/* Error banner */}
+        {error && (
+          <div className="mb-6 flex items-center gap-3 bg-[#FF2D20]/10 border border-[#FF2D20]/30 px-4 py-3 text-sm">
+            <AlertTriangle size={16} className="text-[#FF2D20] shrink-0" />
+            <span className="text-[#FF2D20]">{error}</span>
+            <button onClick={() => setError(null)} className="ml-auto text-[#FF2D20]/60 hover:text-[#FF2D20]">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* Expired timer banner */}
+        {expired && (
+          <div className="mb-6 flex items-center gap-3 bg-[#FF2D20]/10 border border-[#FF2D20]/30 px-4 py-3 text-sm">
+            <AlertTriangle size={16} className="text-[#FF2D20] shrink-0" />
+            <span className="text-[#FF2D20]">Thời gian giữ vé đã hết. Vui lòng quay lại và đặt vé mới.</span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-10">
           <div>
             <h2 style={D} className="text-2xl font-black uppercase italic mb-6">Thông tin khán giả</h2>
@@ -145,7 +170,7 @@ export default function CheckoutPage() {
             </button>
 
             <button onClick={handlePayment}
-              disabled={!name || !email || !agreed || paymentState === 'processing'}
+              disabled={!name || !email || !agreed || paymentState === 'processing' || expired}
               className="w-full bg-[#CCFF00] text-black font-black uppercase tracking-[0.12em] py-4 hover:bg-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {paymentState === 'processing' ? (
                 <><Loader2 size={16} className="animate-spin" /> Đang chuyển hướng...</>
@@ -190,3 +215,4 @@ export default function CheckoutPage() {
     </div>
   );
 }
+

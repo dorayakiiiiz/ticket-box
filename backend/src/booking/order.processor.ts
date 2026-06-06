@@ -64,6 +64,7 @@ export class OrderProcessor extends WorkerHost {
       const order = new Order();
       order.user = { id: userId } as any; // Chỉ set FK, không cần load full entity
       order.concert = { id: eventId } as any;
+      order.ticketType = { id: ticketTypeId } as any; // FK cho PaymentService + CronService truy vết
       order.orderCode = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
       order.totalAmount = unitPrice * quantity;
       order.quantity = quantity;

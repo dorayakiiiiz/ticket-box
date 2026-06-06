@@ -2,12 +2,18 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 import { User } from './user.entity';
 import { Concert } from './concert.entity';
 import { Ticket } from './ticket.entity';
+import { TicketType } from './ticket-type.entity';
 
 export enum OrderStatus {
   PENDING = 'PENDING',
   PAID = 'PAID',
   CANCELLED = 'CANCELLED',
   FAILED = 'FAILED',
+}
+
+export enum PaymentMethod {
+  VNPAY = 'VNPAY',
+  MOMO = 'MOMO',
 }
 
 @Entity('orders')
@@ -24,6 +30,9 @@ export class Order {
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
 
+  @Column({ type: 'enum', enum: PaymentMethod, nullable: true })
+  paymentMethod: PaymentMethod;
+
   @Column({ nullable: true })
   paymentId: string; // VNPAY/MoMo transaction id
 
@@ -36,11 +45,20 @@ export class Order {
   @Column({ default: 1 })
   quantity: number;
 
+  // Cờ đánh dấu đã hoàn vé về Redis chưa — dùng bởi CronService self-healing
+  // Khi order bị CANCELLED/FAILED, cần rollback Redis availability
+  // Nếu Redis rollback lỗi → false → cronjob sẽ thử lại lần sau
+  @Column({ default: false })
+  isRefundedToRedis: boolean;
+
   @ManyToOne(() => User, user => user.orders)
   user: User;
 
   @ManyToOne(() => Concert)
   concert: Concert;
+
+  @ManyToOne(() => TicketType)
+  ticketType: TicketType;
 
   @OneToMany(() => Ticket, ticket => ticket.order)
   tickets: Ticket[];
