@@ -101,21 +101,16 @@ export class PaymentService {
     orderCode: string,
     transactionId?: string,
   ): Promise<{ status: string; message: string }> {
-    // Mở QueryRunner — luồng kết nối DB độc lập cho transaction này
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      //  Từ đây PHẢI dùng queryRunner.manager cho mọi thao tác DB
-      // Dùng this.orderRepo sẽ NẰMM NGOÀI transaction → mất tính nguyên tử
-
-      // Bước 1: Khóa dòng Order bằng Pessimistic Write Lock
-      // Nếu 2 webhook callback đến cùng lúc, cái thứ 2 sẽ phải CHỜ cái thứ nhất xong
+      // BƯỚC 1: TÌM VÀ KHÓA ORDER (TUYỆT ĐỐI KHÔNG DÙNG RELATIONS Ở ĐÂY)
+      // Việc này sinh ra câu query sạch: SELECT * FROM orders WHERE orderCode = $1 FOR UPDATE
       const order = await queryRunner.manager.findOne(Order, {
         where: { orderCode: orderCode },
-        relations: { ticketType: true, user: true },
-        lock: { mode: 'pessimistic_write' },
+        lock: { mode: 'pessimistic_write' }, 
       });
 
       if (!order) {
@@ -123,8 +118,7 @@ export class PaymentService {
         return { status: 'IGNORED', message: 'Order not found' };
       }
 
-      // Bước 2: Kiểm tra trạng thái — chỉ xử lý nếu PENDING
-      // Nếu đã PAID/CANCELLED → webhook trùng lặp hoặc đến muộn → bỏ qua
+      // BƯỚC 2: KIỂM TRA TRẠNG THÁI
       if (order.status !== OrderStatus.PENDING) {
         await queryRunner.rollbackTransaction();
         this.logger.warn(
@@ -132,6 +126,17 @@ export class PaymentService {
         );
         return { status: 'IGNORED', message: 'Order already processed' };
       }
+
+      // BƯỚC 2.5: LOAD DATA QUAN HỆ SAU KHI ĐÃ KHÓA THÀNH CÔNG
+      // Lúc này Order đã an toàn, ta lấy thêm TicketType và User để xài cho việc tạo vé
+      const orderWithRelations = await queryRunner.manager.findOneOrFail(Order, {
+        where: { id: order.id },
+        relations: { ticketType: true, user: true },
+      });
+
+      // Gắn data quan hệ ngược lại vào biến order hiện tại
+      order.ticketType = orderWithRelations.ticketType;
+      order.user = orderWithRelations.user;
 
       // Bước 3: Update Order → PAID + lưu mã giao dịch cổng thanh toán
       order.status = OrderStatus.PAID;
@@ -147,13 +152,13 @@ export class PaymentService {
         ticket.order = order;
         ticket.ticketType = order.ticketType;
         ticket.user = order.user;
-        ticket.qrCode = uuidv4(); // Mã QR duy nhất — dùng cho check-in Phase 5
+        ticket.qrCode = uuidv4(); 
         ticket.status = TicketStatus.VALID;
         tickets.push(ticket);
       }
       await queryRunner.manager.save(tickets);
 
-      // Bước 5: Cập nhật soldQuantity trong TicketType (đồng bộ Postgres với Redis)
+      // Bước 5: Cập nhật soldQuantity trong TicketType
       await queryRunner.manager.increment(
         TicketType,
         { id: order.ticketType.id },
@@ -171,8 +176,6 @@ export class PaymentService {
       return { status: 'SUCCESS', message: 'Order paid and tickets created' };
 
     } catch (error) {
-      // Lỗi BẤT KỲ → Rollback toàn bộ thao tác từ bước 1
-      // Postgres quay về trạng thái trước khi mở transaction → dữ liệu an toàn
       await queryRunner.rollbackTransaction();
 
       this.logger.error(
@@ -180,11 +183,8 @@ export class PaymentService {
         `[ERROR] Failed to process webhook for order ${orderCode} — rolled back`,
       );
 
-      throw error; // Re-throw để Controller trả mã lỗi cho cổng thanh toán biết cần gọi lại
-
+      throw error; 
     } finally {
-      // BẮT BUỘC giải phóng connection trả lại Pool
-      // Nếu không release → connection leak → cạn kiệt Pool → sập hệ thống
       await queryRunner.release();
     }
   }
