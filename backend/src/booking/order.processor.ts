@@ -2,10 +2,8 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
 import { DataSource } from 'typeorm';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { v4 as uuidv4 } from 'uuid';
 import { RedisService } from '../redis/redis.service';
 import { Order, OrderStatus } from '../entities/order.entity';
-import { Ticket, TicketStatus } from '../entities/ticket.entity';
 import { TicketType } from '../entities/ticket-type.entity';
 
 /**
@@ -29,7 +27,7 @@ interface OrderJobData {
  * Flow:
  * 1. Mở transaction Postgres
  * 2. Tạo Order (status: PENDING)
- * 3. Tạo N Ticket records (status: VALID, generate QR code UUID)
+ * 2. Tạo Order (status: PENDING)
  * 4. Cập nhật TicketType.soldQuantity (đồng bộ Postgres với Redis)
  * 5. Commit transaction
  * 6. Lưu orderId vào Redis để FE polling lấy được kết quả
@@ -73,18 +71,7 @@ export class OrderProcessor extends WorkerHost {
 
       const savedOrder = await queryRunner.manager.save(order);
 
-      // 2. Tạo N Ticket records — mỗi ticket có QR code unique
-      const tickets: Ticket[] = [];
-      for (let i = 0; i < quantity; i++) {
-        const ticket = new Ticket();
-        ticket.order = savedOrder;
-        ticket.ticketType = { id: ticketTypeId } as any;
-        ticket.user = { id: userId } as any;
-        ticket.qrCode = uuidv4(); // QR code unique cho mỗi vé
-        ticket.status = TicketStatus.VALID;
-        tickets.push(ticket);
-      }
-      await queryRunner.manager.save(tickets);
+
 
       // 3. Cập nhật soldQuantity trong Postgres (đồng bộ với Redis counter)
       await queryRunner.manager.increment(
