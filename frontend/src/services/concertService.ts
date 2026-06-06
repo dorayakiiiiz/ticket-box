@@ -2,6 +2,35 @@ import apiClient from './apiClient';
 import { EVENTS, ZONES } from './mockData';
 import type { Concert, EventInfo, ZoneInfo } from '../types';
 
+// Base URL cho server-side ISR fetch — chỉ define 1 lần ở đây
+// apiClient không support next: { revalidate } nên ISR phải dùng native fetch
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// ISR fetch dùng trong Server Components (page.tsx, concert/[id]/page.tsx)
+export async function getAllConcerts(): Promise<Concert[]> {
+  try {
+    const res = await fetch(`${API_URL}/concerts`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function getConcertDetail(id: string): Promise<Concert | null> {
+  try {
+    const res = await fetch(`${API_URL}/concerts/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export const concertService = {
   // Real API — used by main pages
   getAll: async (): Promise<Concert[]> => {

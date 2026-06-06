@@ -5,46 +5,18 @@
 // Sau 60 giây, Next.js tự rebuild lại trong nền nếu có dữ liệu mới.
 import Link from "next/link";
 import { ArrowRight, Ticket, Play } from "lucide-react";
-import HeroCarousel from "../components/concert/HeroCarousel";
-import { SmallCard, FeaturedCard } from "../components/concert/EventCards";
-import TickerBanner from "../components/concert/TickerBanner";
-import TrendingScroller from "../components/concert/TrendingScroller";
-import { getMinPrice, formatConcertDate } from "../services/concertService";
-import { fmt } from "../utils/format";
-import type { Concert } from "../types";
+import HeroCarousel from "@/components/concert/HeroCarousel";
+import { SmallCard, FeaturedCard } from "@/components/concert/EventCards";
+import TickerBanner from "@/components/concert/TickerBanner";
+import TrendingScroller from "@/components/concert/TrendingScroller";
+import { getAllConcerts, getMinPrice, formatConcertDate } from "@/services/concertService";
+import { fmt } from "@/utils/format";
+import type { Concert } from "@/types";
 
-// URL backend — dùng env var để hỗ trợ production deploy
-// Server Component chạy phía Node.js nên có thể dùng non-public var
-const API = process.env.NEXT_PUBLIC_API_URL;
-
-// Fetch concerts với ISR revalidate 60s
-// Lỗi fetch thì trả về mảng rỗng, trang vẫn render bình thường
-async function getConcerts(): Promise<Concert[]> {
-  // DEBUG: xóa console.log này sau khi fix xong
-  console.log('[DEBUG] NEXT_PUBLIC_API_URL =', process.env.NEXT_PUBLIC_API_URL);
-  console.log('[DEBUG] API base =', API);
-  console.log('[DEBUG] Fetching:', `${API}/concerts`);
-  try {
-    const res = await fetch(`${API}/concerts`, {
-      next: { revalidate: 60 },
-    });
-    console.log('[DEBUG] Response status:', res.status, res.statusText);
-    if (!res.ok) {
-      console.log('[DEBUG] Response not ok, returning []');
-      return [];
-    }
-    const data = await res.json();
-    console.log('[DEBUG] Concerts count:', data.length);
-    return data;
-  } catch (err) {
-    console.error('[DEBUG] Fetch error:', err);
-    return [];
-  }
-}
 
 export default async function HomePage() {
   // Data được fetch server-side, cache theo ISR
-  const concerts = await getConcerts();
+  const concerts = await getAllConcerts();
 
   const featured = concerts[0];
   const grid = concerts.slice(1, 5);
