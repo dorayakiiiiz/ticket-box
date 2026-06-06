@@ -15,18 +15,29 @@ import type { Concert } from "../types";
 
 // URL backend — dùng env var để hỗ trợ production deploy
 // Server Component chạy phía Node.js nên có thể dùng non-public var
-const API = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? 'http://localhost:8080';
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 // Fetch concerts với ISR revalidate 60s
 // Lỗi fetch thì trả về mảng rỗng, trang vẫn render bình thường
 async function getConcerts(): Promise<Concert[]> {
+  // DEBUG: xóa console.log này sau khi fix xong
+  console.log('[DEBUG] NEXT_PUBLIC_API_URL =', process.env.NEXT_PUBLIC_API_URL);
+  console.log('[DEBUG] API base =', API);
+  console.log('[DEBUG] Fetching:', `${API}/concerts`);
   try {
     const res = await fetch(`${API}/concerts`, {
       next: { revalidate: 60 },
     });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
+    console.log('[DEBUG] Response status:', res.status, res.statusText);
+    if (!res.ok) {
+      console.log('[DEBUG] Response not ok, returning []');
+      return [];
+    }
+    const data = await res.json();
+    console.log('[DEBUG] Concerts count:', data.length);
+    return data;
+  } catch (err) {
+    console.error('[DEBUG] Fetch error:', err);
     return [];
   }
 }
