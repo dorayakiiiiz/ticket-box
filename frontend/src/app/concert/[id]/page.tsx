@@ -4,30 +4,11 @@
 // Phần số vé cần real-time, tách riêng thành Client Component <TicketAvailability>
 import { notFound } from "next/navigation";
 import { Calendar, Clock, MapPin, Users, CheckCircle } from "lucide-react";
-import { getMinPrice } from "../../../services/concertService";
-import TicketAvailability from "../../../components/concert/TicketAvailability";
-import { fmt } from "../../../utils/format";
-import type { Concert } from "../../../types";
-import BackButton from "../../../components/concert/BackButton";
-import BookingButton from "../../../components/concert/BookingButton";
-
-// URL backend — nhất quán với homepage
-const API =
-  process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ??
-  "http://localhost:8080";
-
-// Fetch concert detail với ISR revalidate 60s
-async function getConcert(id: string): Promise<Concert | null> {
-  try {
-    const res = await fetch(`${API}/concerts/${id}`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
+import { getConcertDetail, getMinPrice } from "@/services/concertService";
+import TicketAvailability from "@/components/concert/TicketAvailability";
+import { fmt } from "@/utils/format";
+import BackButton from "@/components/concert/BackButton";
+import BookingButton from "@/components/concert/BookingButton";
 
 export default async function EventDetailPage({
   params,
@@ -35,7 +16,7 @@ export default async function EventDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const concert = await getConcert(id);
+  const concert = await getConcertDetail(id);
 
   // 404 nếu không tìm thấy — Next.js tự render not-found page
   if (!concert) notFound();
