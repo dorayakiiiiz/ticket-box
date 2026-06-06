@@ -7,7 +7,7 @@ Các concert âm nhạc lớn tại Việt Nam — như Anh Trai Say Hi, Anh Tra
 Hiện tại nhiều sự kiện vẫn bán vé qua các kênh rời rạc: Zalo OA, Google Form, chuyển khoản thủ công — không đảm bảo tính công bằng và rất dễ xảy ra gian lận.
 
 Công ty tổ chức sự kiện muốn xây dựng hệ thống TicketBox để số hóa toàn bộ quy trình bán vé, từ lúc mở bán đến khi khán giả vào cổng sự kiện.
- 
+
 ---
 
 ## Người dùng
