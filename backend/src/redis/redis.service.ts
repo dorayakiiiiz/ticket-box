@@ -147,4 +147,19 @@ export class RedisService implements OnModuleInit {
       `Rollback booking: returned ${quantity} ticket(s) for ticketType=${ticketTypeId}, user=${userId}`,
     );
   }
+
+  // ─── Distributed Lock ────────────────────────────────────────────────────────
+
+  /**
+   * Tạo Distributed Lock (Khóa phân tán) bằng Redis SET NX
+   * Dùng để ngăn chặn nhiều server cùng chạy 1 cronjob (tránh Race Condition)
+   * 
+   * @param key - Tên của lock
+   * @param ttlSeconds - Thời gian sống của lock (giây)
+   * @returns true nếu lấy được lock, false nếu đã có server khác giữ
+   */
+  async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+    const result = await this.redis.set(key, 'locked', 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
 }
