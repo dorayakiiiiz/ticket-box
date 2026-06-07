@@ -119,9 +119,10 @@ export class PaymentController {
       const orderCode = query['vnp_TxnRef'];         // Mã đơn hàng ta gửi lúc tạo URL
       const responseCode = query['vnp_ResponseCode']; // Mã phản hồi VNPAY (00 = thành công), VNPay sẽ tự thực hiện
       const transactionNo = query['vnp_TransactionNo']; // Mã giao dịch phía VNPAY
+      const vnpAmount = query['vnp_Amount'];
 
       this.logger.info(
-        `VNPAY IPN: orderCode=${orderCode}, responseCode=${responseCode}, transNo=${transactionNo}`,
+        `VNPAY IPN: orderCode=${orderCode}, responseCode=${responseCode}, transNo=${transactionNo}, vnpAmount=${vnpAmount}`,
       );
 
       // Bước 2: Kiểm tra mã phản hồi — 00 là thành công
@@ -129,6 +130,7 @@ export class PaymentController {
         const result = await this.paymentService.processWebhookSuccess(
           orderCode,
           transactionNo,
+          vnpAmount ? Number(vnpAmount) / 100 : undefined,
         );
 
         return res.status(HttpStatus.OK).json({
@@ -195,10 +197,10 @@ export class PaymentController {
         return res.status(HttpStatus.BAD_REQUEST).send('Invalid Signature');
       }
 
-      const { orderId, resultCode, transId, message } = body;
+      const { orderId, resultCode, transId, message, amount } = body;
 
       this.logger.info(
-        `MoMo IPN: orderId=${orderId}, resultCode=${resultCode}, transId=${transId}`,
+        `MoMo IPN: orderId=${orderId}, resultCode=${resultCode}, transId=${transId}, amount=${amount}`,
       );
 
       // Bước 2: resultCode === 0 là thanh toán thành công (MoMo dùng number, không phải string)
@@ -206,6 +208,7 @@ export class PaymentController {
         await this.paymentService.processWebhookSuccess(
           orderId,
           String(transId),
+          amount ? Number(amount) : undefined,
         );
       } else {
         this.logger.warn(

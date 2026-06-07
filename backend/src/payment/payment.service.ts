@@ -100,6 +100,7 @@ export class PaymentService {
   async processWebhookSuccess(
     orderCode: string,
     transactionId?: string,
+    paidAmount?: number,
   ): Promise<{ status: string; message: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -125,6 +126,17 @@ export class PaymentService {
           `Webhook ignored: order ${orderCode} already ${order.status}`,
         );
         return { status: 'IGNORED', message: 'Order already processed' };
+      }
+
+      // [FIX] Lỗ hổng bảo mật Payment Amount Bypass
+      // Bắt buộc kiểm tra số tiền trả về từ Webhook CÓ KHỚP với số tiền thực tế của đơn hàng không.
+      // Nếu không kiểm tra, hacker có thể sửa giá trị vnp_Amount thành 100đ và vẫn được báo thanh toán thành công.
+      if (paidAmount !== undefined && Number(paidAmount) !== Number(order.totalAmount)) {
+        await queryRunner.rollbackTransaction();
+        this.logger.error(
+          `[SECURITY ALERT] Sai lệch số tiền thanh toán! Đơn ${orderCode} giá ${order.totalAmount} nhưng Webhook báo đã trả ${paidAmount}. Nghi vấn Hacker can thiệp!`,
+        );
+        return { status: 'IGNORED', message: 'Invalid payment amount' };
       }
 
       // BƯỚC 2.5: LOAD DATA QUAN HỆ SAU KHI ĐÃ KHÓA THÀNH CÔNG

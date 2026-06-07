@@ -34,12 +34,27 @@ export class CronService {
    */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async handleExpiredOrders(): Promise<void> {
-    this.logger.info('⏰ Cronjob: Bắt đầu quét đơn hàng treo...');
+    // [FIX] Lỗ hổng Distributed Cronjob Race Condition
+    // Sử dụng Redis SET NX để tạo Distributed Lock.
+    // Đảm bảo chỉ có 1 server (instance) duy nhất được phép chạy cronjob này tại 1 thời điểm,
+    // tránh việc nhiều server cùng query và trả vé lặp lại (double refund) trên Redis.
+    const lockKey = 'cronjob:lock:handleExpiredOrders';
+    const lockTTL = 4 * 60; // Khóa trong 4 phút (cron chạy 5 phút/lần)
+    
+    const acquired = await this.redisService.acquireLock(lockKey, lockTTL);
+    if (!acquired) {
+      this.logger.info('⏰ Cronjob: Server khác đang chạy quét đơn hàng. Bỏ qua để tránh Race Condition.');
+      return;
+    }
+
+    this.logger.info('⏰ Cronjob: Bắt đầu quét đơn hàng treo (Đã giữ Lock)...');
 
     await this.cancelExpiredOrders();
     await this.selfHealRedisRefunds();
 
     this.logger.info('⏰ Cronjob: Hoàn tất.');
+    // Không cần nhả lock (delete key) vì TTL 4 phút sẽ tự động nhả trước chu kỳ 5 phút tiếp theo,
+    // đồng thời ngăn các node khác chạy lặp lại nếu đồng hồ máy chủ bị lệch vài giây.
   }
 
   /**

@@ -73,13 +73,7 @@ export class OrderProcessor extends WorkerHost {
 
 
 
-      // 3. Cập nhật soldQuantity trong Postgres (đồng bộ với Redis counter)
-      await queryRunner.manager.increment(
-        TicketType,
-        { id: ticketTypeId },
-        'soldQuantity',
-        quantity,
-      );
+
 
       // 4. Commit transaction
       await queryRunner.commitTransaction();
@@ -102,17 +96,20 @@ export class OrderProcessor extends WorkerHost {
         `Order job ${job.id} failed — rolling back Redis booking`,
       );
 
-      // Compensating transaction: trả lại vé vào Redis
-      // Vì Lua Script đã trừ vé nhưng Postgres insert thất bại,
-      // phải hoàn vé để không mất vé "ảo"
-      await this.redisService.rollbackBooking(ticketTypeId, userId, quantity);
-
-      // Nếu đây là lần thử cuối cùng (hoặc vượt quá), set kết quả là FAILED để FE ngừng polling
+      // [FIX] Lỗ hổng Over-booking: Chỉ trả vé về Redis khi ĐÃ HẾT SỐ LẦN RETRY.
+      // Nếu trả vé về Redis ngay từ lần retry đầu tiên, một người dùng khác có thể lập tức mua mất slot này.
+      // Sau đó, lần retry thứ 2 của Job này vô tình chèn thành công vào DB -> Hệ thống bán lố vé (Over-booking).
+      // Việc chờ đến attempt cuối cùng giúp giữ nguyên Lock trong Redis suốt quá trình retry.
       if (job.opts.attempts && job.attemptsMade >= job.opts.attempts) {
+        // Compensating transaction: trả lại vé vào Redis
+        // Lúc này Postgres thực sự đã thất bại hoàn toàn, ta hoàn vé để không mất vé "ảo"
+        await this.redisService.rollbackBooking(ticketTypeId, userId, quantity);
+        
+        // Set kết quả là FAILED để FE ngừng polling
         await this.redisService.setJobResult(idempotencyKey, 'FAILED');
       }
 
-      throw err; // Re-throw để BullMQ biết job failed và retry
+      throw err; // Re-throw để BullMQ biết job failed và tiến hành retry (nếu còn)
     } finally {
       await queryRunner.release();
     }
