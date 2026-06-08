@@ -19,6 +19,7 @@ interface AuthState {
   initialize: () => void;
   openAuthModal: () => void;
   closeAuthModal: () => void;
+  isInitialized: boolean;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isAuthenticated: false,
   isAuthModalOpen: false,
+  isInitialized: false,
 
   openAuthModal: () => set({ isAuthModalOpen: true }),
   closeAuthModal: () => set({ isAuthModalOpen: false }),
@@ -64,20 +66,21 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: () => {
     if (typeof window !== 'undefined') {
-      // Ưu tiên đọc từ Cookie trước
-      // const token = Cookies.get('token') || localStorage.getItem('token');
-      // const userStr = Cookies.get('user') || localStorage.getItem('user');
       const token = Cookies.get('token');
       const userStr = Cookies.get('user');
 
       if (token && userStr) {
         try {
           const user = JSON.parse(userStr);
-          set({ user, token, isAuthenticated: true });
+          set({ user, token, isAuthenticated: true, isInitialized: true });
         } catch (e) {
-          set({ user: null, token: null, isAuthenticated: false });
+          set({ user: null, token: null, isAuthenticated: false, isInitialized: true });
         }
+      } else {
+        set({ isInitialized: true });
       }
+    } else {
+      set({ isInitialized: true });
     }
   }
 }));
