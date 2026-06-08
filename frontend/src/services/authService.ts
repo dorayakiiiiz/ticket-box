@@ -19,5 +19,15 @@ export const authService = {
   googleLogin: async (supabaseToken: string) => {
     const response = await apiClient.post('/auth/supabase-login', { token: supabaseToken });
     return response.data;
+  },
+
+  forgotPassword: async (email: string) => {
+    const response = await apiClient.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (email: string, code: string, newPassword: string) => {
+    const response = await apiClient.post('/auth/reset-password', { email, code, newPassword });
+    return response.data;
   }
 };

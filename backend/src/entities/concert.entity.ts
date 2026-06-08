@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, DeleteDateColumn, OneToMany, Index } from 'typeorm';
 import { TicketType } from './ticket-type.entity';
 
 export enum ConcertStatus {
@@ -9,6 +9,8 @@ export enum ConcertStatus {
 }
 
 @Entity('concerts')
+// Index phục vụ cho Cronjob nhắc nhở sự kiện trước 24h
+@Index(['status', 'isReminded', 'date'])
 export class Concert {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -44,6 +46,10 @@ export class Concert {
   @Column({ default: 'IDLE' })
   aiBioStatus: string;
 
+  // Track if a reminder email has been sent to users 24h before
+  @Column({ default: false })
+  isReminded: boolean;
+
   @OneToMany(() => TicketType, ticketType => ticketType.concert)
   ticketTypes: TicketType[];
 
@@ -52,4 +58,7 @@ export class Concert {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }

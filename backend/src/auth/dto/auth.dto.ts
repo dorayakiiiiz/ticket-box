@@ -41,3 +41,25 @@ export class SupabaseLoginDto {
   @IsNotEmpty({ message: 'Token không được để trống' })
   token: string;
 }
+
+export class ForgotPasswordDto {
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsNotEmpty({ message: 'Email không được để trống' })
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  @IsNotEmpty({ message: 'Email không được để trống' })
+  email: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Mã OTP không được để trống' })
+  @Length(6, 6, { message: 'Mã OTP phải có đúng 6 ký tự' })
+  code: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Mật khẩu mới không được để trống' })
+  @MinLength(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' })
+  newPassword: string;
+}
