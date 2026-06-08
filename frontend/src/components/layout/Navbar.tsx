@@ -1,18 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X, Sparkles } from "lucide-react";
 import Link from "next/link";
 import AuthModal from "../auth/AuthModal";
 import { useAuthStore } from "../../stores/authStore";
-import { useEffect } from "react";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  // mounted: tránh hydration mismatch do auth state chỉ có ở client
+  const [mounted, setMounted] = useState(false);
   const { user, isAuthenticated, initialize, logout, isAuthModalOpen, openAuthModal, closeAuthModal } = useAuthStore();
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
 
   useEffect(() => {
     initialize();
+    setMounted(true);
   }, [initialize]);
 
   return (
@@ -32,28 +34,22 @@ export default function Navbar() {
           </Link>
           <div className="hidden md:flex items-center gap-6 text-[11px] md:text-sm font-semibold uppercase tracking-[0.12em] text-gray-400">
             {["Sự Kiện", "Nghệ Sĩ", "Địa Điểm", "Khuyến Mãi"].map((l) => (
-              <Link
-                key={l}
-                href="/"
-                className="hover:text-white transition-colors"
-              >
+              <Link key={l} href="/" className="hover:text-white transition-colors">
                 {l}
               </Link>
             ))}
           </div>
-          <div className="flex items-center gap-3">
-            {isAuthenticated && user ? (
+
+          {/* Auth section — chỉ render sau khi mounted để tránh hydration mismatch */}
+          <div className="flex items-center gap-3" suppressHydrationWarning>
+            {mounted && isAuthenticated && user ? (
               <div className="hidden md:flex items-center gap-3 group relative cursor-pointer">
                 <div className="text-[11px] md:text-sm font-semibold text-white">
                   {user.fullName}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-[#333] flex items-center justify-center text-[#CCFF00] font-bold text-sm border border-[#444] overflow-hidden">
                   {user.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt="avatar"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
                   ) : (
                     user.fullName.charAt(0).toUpperCase()
                   )}
@@ -78,13 +74,16 @@ export default function Navbar() {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : mounted ? (
               <button
                 onClick={openAuthModal}
                 className="hidden md:block text-[11px] md:text-sm font-semibold uppercase tracking-[0.12em] text-gray-400 hover:text-white transition-colors"
               >
                 Đăng nhập
               </button>
+            ) : (
+              // Placeholder trong khi chờ mount — giữ layout không bị nhảy
+              <div className="hidden md:block w-16 h-4" />
             )}
             <Link
               href="/"
@@ -102,24 +101,13 @@ export default function Navbar() {
         </div>
         {open && (
           <div className="md:hidden border-t border-[#222] bg-[#080808] px-6 py-4 flex flex-col gap-4 text-[12px] font-semibold uppercase tracking-[0.12em] text-gray-400">
-            <Link
-              href="/"
-              onClick={() => setOpen(false)}
-              className="text-left hover:text-white"
-            >
+            <Link href="/" onClick={() => setOpen(false)} className="text-left hover:text-white">
               Sự Kiện
             </Link>
-            <Link href="/" className="hover:text-white">
-              Nghệ Sĩ
-            </Link>
-            <Link href="/" className="hover:text-white">
-              Địa Điểm
-            </Link>
+            <Link href="/" className="hover:text-white">Nghệ Sĩ</Link>
+            <Link href="/" className="hover:text-white">Địa Điểm</Link>
             <button
-              onClick={() => {
-                openAuthModal();
-                setOpen(false);
-              }}
+              onClick={() => { openAuthModal(); setOpen(false); }}
               className="text-left hover:text-white"
             >
               Đăng nhập
