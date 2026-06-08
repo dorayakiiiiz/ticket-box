@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${plusJakartaSans.variable} ${barlowCondensed.variable}`}>
+    <html lang="vi" suppressHydrationWarning className={`${plusJakartaSans.variable} ${barlowCondensed.variable}`}>
       <body suppressHydrationWarning className="antialiased bg-[#050505] text-white min-h-screen flex flex-col">
         <ClientLayout>
           {children}
