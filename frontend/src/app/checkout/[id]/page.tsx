@@ -82,7 +82,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      const result = await paymentService.createPaymentUrl(orderId, paymentMethod);
+      const result = await paymentService.createPaymentUrl(orderId, paymentMethod, name, email, phone);
       // Redirect trình duyệt sang cổng thanh toán (VNPay/MoMo sandbox)
       window.location.href = result.paymentUrl;
     } catch (err: any) {

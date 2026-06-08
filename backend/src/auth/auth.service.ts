@@ -4,14 +4,13 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import * as nodemailer from 'nodemailer';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { User, UserRole } from '../entities/user.entity';
+import { User } from '../entities/user.entity';
 import { Otp } from '../entities/otp.entity';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
-  private transporter;
   private supabase: SupabaseClient;
 
   constructor(
@@ -19,16 +18,8 @@ export class AuthService {
     @InjectRepository(Otp) private otpRepo: Repository<Otp>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {
-    // Cấu hình Nodemailer
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: this.configService.get<string>('EMAIL_USER') || '',
-        pass: this.configService.get<string>('EMAIL_PASS') || '',
-      },
-    });
-
     // Cấu hình Supabase client để verify token nếu cần
     this.supabase = createClient(
       this.configService.get<string>('SUPABASE_URL') || '',
@@ -61,12 +52,11 @@ export class AuthService {
     await this.otpRepo.save(otp);
 
     // Gửi email
-    await this.transporter.sendMail({
-      from: `"TicketZ" <${this.configService.get<string>('EMAIL_USER')}>`,
-      to: email,
-      subject: 'Mã xác nhận đăng ký TicketZ',
-      html: `<b>Mã OTP của bạn là: <span style="font-size:24px; color:#CCFF00; background:#000; padding:4px 8px;">${otpCode}</span></b>. Mã có hiệu lực trong 5 phút.`,
-    });
+    await this.mailService.sendMail(
+      email,
+      'Mã xác nhận đăng ký TicketZ',
+      `<b>Mã OTP của bạn là: <span style="font-size:24px; color:#CCFF00; background:#000; padding:4px 8px;">${otpCode}</span></b>. Mã có hiệu lực trong 5 phút.`
+    );
 
     return { message: 'OTP đã được gửi đến email của bạn.' };
   }

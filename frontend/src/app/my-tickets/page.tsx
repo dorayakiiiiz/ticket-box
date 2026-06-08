@@ -99,28 +99,46 @@ export default function MyTicketsPage() {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                {order.tickets.map((ticket, index) => (
-                  <div key={ticket.id} className="flex bg-zinc-950 rounded-xl border border-zinc-800 overflow-hidden">
-                    <div className="p-4 flex items-center justify-center bg-white">
-                      {/* Using free QR Code API to generate QR Code image from ticket.qrCode */}
-                      <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(ticket.qrCode)}`}
-                        alt={`QR Code for Ticket ${ticket.id}`}
-                        className="w-[120px] h-[120px] object-contain"
-                      />
-                    </div>
-                    <div className="p-4 flex-1 flex flex-col justify-center border-l border-dashed border-zinc-800 relative">
-                      <div className="absolute -left-2 top-[-10px] w-4 h-4 rounded-full bg-zinc-900 border-b border-r border-zinc-800 rotate-45"></div>
-                      <div className="absolute -left-2 bottom-[-10px] w-4 h-4 rounded-full bg-zinc-900 border-t border-r border-zinc-800 rotate-45"></div>
-                      
-                      <div className="flex items-center gap-2 mb-2">
-                        <QrCode className="w-5 h-5 text-emerald-500" />
-                        <span className="text-xs text-zinc-500 font-mono">Vé #{index + 1}</span>
+              <div className="p-4 sm:p-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {order.tickets.map((ticket, index) => {
+                  const accentColor = '#10b981'; // emerald-500
+                  return (
+                  <div key={ticket.id} className="relative overflow-hidden border border-white/10 bg-[#111] flex flex-col sm:flex-row w-full rounded-lg">
+                    {/* Left accent stripe */}
+                    <div className="w-1.5 shrink-0 hidden sm:block" style={{ backgroundColor: accentColor }} />
+                    {/* Top accent stripe for mobile */}
+                    <div className="h-1.5 w-full sm:hidden" style={{ backgroundColor: accentColor }} />
+
+                    {/* Left section: Info */}
+                    <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between gap-4 mb-5">
+                          <div>
+                            <div style={D} className="text-[10px] font-mono tracking-[0.25em] text-zinc-500 uppercase mb-1">VITICKET — E-TICKET</div>
+                            <h1 style={D} className="text-2xl sm:text-3xl font-black uppercase italic leading-none text-white">{order.concert.name}</h1>
+                            <p className="text-xs sm:text-sm font-semibold tracking-[0.06em] mt-1.5" style={{ color: accentColor }}>{order.ticketType.name}</p>
+                          </div>
+                          <div className="shrink-0 text-right hidden sm:block">
+                            <div className="text-[9px] font-mono text-zinc-500 mb-1">VÉ SỐ</div>
+                            <div className="font-mono font-bold text-sm text-white">#{index + 1}</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="text-[9px] font-mono tracking-[0.2em] uppercase text-zinc-500 mb-1">Thời gian</div>
+                            <div className="text-xs sm:text-sm font-bold text-white">{new Date(order.concert.date).toLocaleString('vi-VN')}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] font-mono tracking-[0.2em] uppercase text-zinc-500 mb-1">Giá trị</div>
+                            <div style={D} className="text-lg sm:text-xl font-black text-white">{order.ticketType.price.toLocaleString('vi-VN')}đ</div>
+                          </div>
+                        </div>
                       </div>
-                      <p className="font-bold text-white mb-1">{order.ticketType.name}</p>
-                      <div className="mt-auto">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      
+                      {/* Trạng thái */}
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
                           ticket.status === 'UNUSED' || ticket.status === 'VALID' 
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                             : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
@@ -129,8 +147,27 @@ export default function MyTicketsPage() {
                         </span>
                       </div>
                     </div>
+
+                    {/* Perforation */}
+                    <div className="flex sm:flex-col items-center">
+                      <div className="w-5 h-5 -mt-2.5 sm:-ml-2.5 sm:mt-0 rounded-full bg-[#09090b] border-b sm:border-b-0 sm:border-r border-white/10 sm:block" />
+                      <div className="flex-1 border-t sm:border-t-0 sm:border-l border-dashed border-white/12 w-full sm:w-0 sm:h-full" />
+                      <div className="w-5 h-5 -mb-2.5 sm:-mr-2.5 sm:mb-0 rounded-full bg-[#09090b] border-t sm:border-t-0 sm:border-l border-white/10 sm:block" />
+                    </div>
+
+                    {/* Right section: QR Code */}
+                    <div className="p-5 sm:p-6 flex flex-col items-center justify-center shrink-0">
+                      <div className="bg-white p-2 rounded mb-2">
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(ticket.qrCode)}`}
+                          alt={`QR Code for Ticket ${ticket.id}`}
+                          className="w-[100px] h-[100px] sm:w-[120px] sm:h-[120px] object-contain"
+                        />
+                      </div>
+                      <div className="text-[9px] font-mono tracking-widest text-zinc-500 uppercase">Mã quét vào cổng</div>
+                    </div>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           ))}

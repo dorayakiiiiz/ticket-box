@@ -7,6 +7,9 @@ import { Order, OrderStatus, PaymentMethod } from '../entities/order.entity';
 import { Ticket, TicketStatus } from '../entities/ticket.entity';
 import { TicketType } from '../entities/ticket-type.entity';
 
+import { CreatePaymentDto } from './dto/create-payment.dto';
+import { MailService } from '../mail/mail.service';
+
 /**
  * PaymentService — Trung tâm xử lý thanh toán Phase 4
  *
@@ -23,6 +26,7 @@ export class PaymentService {
     private readonly logger: PinoLogger,
     private readonly paymentFactory: PaymentFactory,
     private readonly dataSource: DataSource,
+    private readonly mailService: MailService,
   ) {}
 
   /**
@@ -33,16 +37,15 @@ export class PaymentService {
    * 2. Lưu paymentMethod vào Order (để webhook biết route sang strategy nào)
    * 3. Gọi strategy tương ứng tạo URL (qua Circuit Breaker)
    *
-   * @param orderId - UUID đơn hàng từ Phase 3
-   * @param paymentMethod - Cổng thanh toán user chọn (VNPAY/MOMO)
+   * @param dto - Thông tin thanh toán (orderId, paymentMethod, guestName, guestEmail, guestPhone)
    * @param ipAddress - IP client (VNPAY bắt buộc truyền)
    * @returns URL thanh toán để FE redirect trình duyệt
    */
   async createPaymentUrl(
-    orderId: string,
-    paymentMethod: PaymentMethod,
+    dto: CreatePaymentDto,
     ipAddress: string,
   ): Promise<string> {
+    const { orderId, paymentMethod, guestName, guestEmail, guestPhone } = dto;
     // 1. Tìm Order — phải tồn tại và đang PENDING
     const order = await this.dataSource.getRepository(Order).findOne({
       where: { id: orderId },
@@ -61,6 +64,9 @@ export class PaymentService {
 
     // 2. Lưu phương thức thanh toán đã chọn vào Order
     order.paymentMethod = paymentMethod;
+    order.guestName = guestName;
+    order.guestEmail = guestEmail;
+    order.guestPhone = guestPhone;
     await this.dataSource.getRepository(Order).save(order);
 
     // 3. Lấy strategy tương ứng và tạo URL (Circuit Breaker bọc bên trong)
@@ -184,6 +190,90 @@ export class PaymentService {
       this.logger.info(
         `[SUCCESS] Order ${orderCode} → PAID. Created ${order.quantity} ticket(s). Transaction: ${transactionId || 'N/A'}`,
       );
+
+      // Bước 7: Gửi email chứa vé
+      const emailToSend = order.guestEmail || order.user.email;
+      if (emailToSend) {
+        const ticketListHtml = tickets.map((t, index) => {
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(t.qrCode)}`;
+          return `
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #111111; border: 1px solid #333333; margin-bottom: 24px; border-radius: 12px; border-collapse: collapse; overflow: hidden;">
+              <tr>
+                <!-- Left side: Info -->
+                <td style="padding: 24px; vertical-align: middle; border-right: 2px dashed #333333; width: 70%;">
+                  <div style="color: #CCFF00; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;">Vé #${index + 1}</div>
+                  <div style="color: #ffffff; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 8px;">${order.ticketType.name}</div>
+                  <div style="color: #888888; font-size: 14px; margin-bottom: 16px;">Sự kiện: ${order.ticketType.concert?.name || 'Sự kiện âm nhạc'}</div>
+                  
+                  <div style="background-color: #000000; display: inline-block; padding: 8px 12px; border-radius: 6px; border: 1px solid #222222;">
+                    <div style="color: #555555; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Mã định danh (ID)</div>
+                    <div style="color: #ffffff; font-size: 14px; font-family: monospace, Courier;">${t.qrCode}</div>
+                  </div>
+                </td>
+                <!-- Right side: QR Code -->
+                <td width="30%" align="center" style="padding: 24px; vertical-align: middle; background-color: #0a0a0a;">
+                  <div style="background-color: #ffffff; padding: 10px; border-radius: 8px; display: inline-block;">
+                    <img src="${qrUrl}" alt="QR Code" width="120" height="120" style="display: block;" />
+                  </div>
+                  <div style="color: #555555; font-size: 11px; margin-top: 12px; font-weight: bold; text-transform: uppercase;">Quét để vào cổng</div>
+                </td>
+              </tr>
+            </table>
+          `;
+        }).join('');
+
+        const htmlContent = `
+          <div style="background-color: #000000; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px 20px; line-height: 1.6;">
+            <div style="max-w-idth: 600px; margin: 0 auto;">
+              <!-- Header -->
+              <div style="text-align: center; margin-bottom: 40px;">
+                <h1 style="color: #CCFF00; font-size: 36px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 4px; font-style: italic;">TicketZ</h1>
+                <div style="color: #888888; font-size: 14px; letter-spacing: 1px; margin-top: 8px;">E-TICKET DELIVERY</div>
+              </div>
+
+              <!-- Order Summary -->
+              <div style="background-color: #111111; border: 1px solid #222222; padding: 24px; border-radius: 8px; margin-bottom: 32px;">
+                <h2 style="color: #ffffff; font-size: 20px; margin-top: 0; margin-bottom: 16px;">Cảm ơn bạn đã mua vé!</h2>
+                <table width="100%" cellpadding="0" cellspacing="0" style="color: #cccccc; font-size: 14px;">
+                  <tr>
+                    <td style="padding-bottom: 12px; width: 40%; color: #666666; text-transform: uppercase; font-size: 12px; font-weight: bold; letter-spacing: 1px;">Mã đơn hàng</td>
+                    <td style="padding-bottom: 12px; font-weight: bold; color: #ffffff;">${orderCode}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding-bottom: 12px; color: #666666; text-transform: uppercase; font-size: 12px; font-weight: bold; letter-spacing: 1px;">Khách hàng</td>
+                    <td style="padding-bottom: 12px; font-weight: bold; color: #ffffff;">${order.guestName || order.user.fullName || 'Khách hàng'}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: #666666; text-transform: uppercase; font-size: 12px; font-weight: bold; letter-spacing: 1px;">Số lượng vé</td>
+                    <td style="font-weight: bold; color: #CCFF00;">${order.quantity} vé</td>
+                  </tr>
+                </table>
+              </div>
+
+              <p style="color: #cccccc; font-size: 15px; margin-bottom: 24px; text-align: center;">Vui lòng lưu lại email này và xuất trình <strong>Mã QR</strong> tại khu vực kiểm soát vé để vào sự kiện.</p>
+
+              <!-- Tickets -->
+              ${ticketListHtml}
+
+              <!-- Footer -->
+              <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #222222; text-align: center;">
+                <p style="color: #ff3333; font-size: 13px; margin: 0 0 8px 0; font-weight: bold;">⚠️ BẢO MẬT VÉ QUAN TRỌNG</p>
+                <p style="color: #666666; font-size: 12px; margin: 0 0 20px 0;">Tuyệt đối KHÔNG chia sẻ mã QR này hoặc đăng tải lên mạng xã hội để tránh bị kẻ gian đánh cắp vé.</p>
+                <p style="color: #444444; font-size: 11px; margin: 0;">© 2026 TicketZ. All rights reserved.</p>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // We run email sending asynchronously without blocking the webhook response
+        this.mailService.sendMail(
+          emailToSend,
+          `Vé điện tử của bạn - Đơn hàng ${orderCode}`,
+          htmlContent
+        ).catch(e => {
+          this.logger.error({ err: e }, `Failed to send E-Ticket email for order ${orderCode}`);
+        });
+      }
 
       return { status: 'SUCCESS', message: 'Order paid and tickets created' };
 

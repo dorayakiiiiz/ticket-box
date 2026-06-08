@@ -71,10 +71,6 @@ export class OrderProcessor extends WorkerHost {
 
       const savedOrder = await queryRunner.manager.save(order);
 
-
-
-
-
       // 4. Commit transaction
       await queryRunner.commitTransaction();
 
@@ -104,7 +100,7 @@ export class OrderProcessor extends WorkerHost {
         // Compensating transaction: trả lại vé vào Redis
         // Lúc này Postgres thực sự đã thất bại hoàn toàn, ta hoàn vé để không mất vé "ảo"
         await this.redisService.rollbackBooking(ticketTypeId, userId, quantity);
-        
+
         // Set kết quả là FAILED để FE ngừng polling
         await this.redisService.setJobResult(idempotencyKey, 'FAILED');
       }

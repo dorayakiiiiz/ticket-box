@@ -8,9 +8,12 @@ import { User } from '../entities/user.entity';
 import { Otp } from '../entities/otp.entity';
 import { JwtStrategy } from '../common/guards/jwt.strategy';
 
+import { MailModule } from '../mail/mail.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Otp]),
+    MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
