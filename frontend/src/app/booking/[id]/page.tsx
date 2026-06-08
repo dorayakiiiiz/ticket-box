@@ -8,7 +8,7 @@ import { bookingService } from '@/services/bookingService';
 import { useAuthStore } from '@/stores/authStore';
 import type { Concert, ConcertAvailability, TicketType } from '@/types';
 import { fmt } from '@/utils/format';
-import { Turnstile } from '@marsidev/react-turnstile';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
 /**
  * SeatMapPage — Trang chọn khu vực và số lượng vé
@@ -35,6 +35,7 @@ export default function SeatMapPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [captchaToken, setCaptchaToken] = useState('');
   const idempotencyKeyRef = useRef<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollFailCount = useRef(0);
 
@@ -94,17 +95,18 @@ export default function SeatMapPage() {
           // Xử lý lỗi khi polling (ví dụ: network error)
           pollFailCount.current += 1;
           if (pollFailCount.current >= 5) {
-            // Lỗi liên tục 5 lần (~10s) -> Dừng polling và báo lỗi
             if (pollRef.current) clearInterval(pollRef.current);
             setBookingState('error');
             setErrorMsg('Lỗi kết nối khi đang tạo đơn. Vui lòng kiểm tra lại kết nối và thử lại.');
             resetIdempotencyKey();
+            turnstileRef.current?.reset();
           }
         }
       }, 2000);
     } catch (err: any) {
       setBookingState('error');
       resetIdempotencyKey(); // Sinh key mới để thử lại
+      turnstileRef.current?.reset(); // <== Bắt buộc phải reset Captcha vì Token chỉ dùng được 1 lần!
 
       const status = err.response?.status;
       const msg = err.response?.data?.message;
@@ -112,6 +114,7 @@ export default function SeatMapPage() {
       else if (status === 409) setErrorMsg('Yêu cầu đang xử lý, không bấm lại.');
       else if (status === 400) setErrorMsg(msg || 'Hết vé hoặc vượt giới hạn.');
       else if (status === 401) setErrorMsg('Vui lòng đăng nhập để đặt vé.');
+      else if (status === 403) setErrorMsg(msg || 'Bị từ chối truy cập (Lỗi Captcha).');
       else setErrorMsg('Đã xảy ra lỗi. Vui lòng thử lại sau.');
     }
   }, [sel, qty, isAuthenticated, id, router, captchaToken]);
@@ -311,6 +314,7 @@ export default function SeatMapPage() {
               {/* CLOUDFLARE TURNSTILE CAPTCHA */}
               <div className="mb-4 flex justify-center">
                 <Turnstile
+                  ref={turnstileRef}
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
                   onSuccess={(token) => setCaptchaToken(token)}
                   onError={() => setErrorMsg('Captcha bị lỗi, vui lòng thử lại')}
