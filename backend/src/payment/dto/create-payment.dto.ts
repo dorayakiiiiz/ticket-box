@@ -17,4 +17,16 @@ export class CreatePaymentDto {
   })
   @IsNotEmpty({ message: 'paymentMethod không được để trống' })
   paymentMethod: PaymentMethod;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Tên người nhận vé không được để trống' })
+  guestName: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Email người nhận vé không được để trống' })
+  guestEmail: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Số điện thoại người nhận vé không được để trống' })
+  guestPhone: string;
 }

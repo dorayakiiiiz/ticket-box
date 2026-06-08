@@ -65,8 +65,7 @@ export class PaymentController {
       '127.0.0.1';
 
     const paymentUrl = await this.paymentService.createPaymentUrl(
-      dto.orderId,
-      dto.paymentMethod,
+      dto,
       ipAddress,
     );
 

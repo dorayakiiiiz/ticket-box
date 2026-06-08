@@ -60,6 +60,16 @@ export class Order {
   @ManyToOne(() => TicketType)
   ticketType: TicketType;
 
+  // Khách hàng vãng lai (hoặc thông tin người nhận vé)
+  @Column({ nullable: true })
+  guestName: string;
+
+  @Column({ nullable: true })
+  guestEmail: string;
+
+  @Column({ nullable: true })
+  guestPhone: string;
+
   @OneToMany(() => Ticket, ticket => ticket.order)
   tickets: Ticket[];
 

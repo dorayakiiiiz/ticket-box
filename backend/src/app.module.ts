@@ -24,6 +24,7 @@ import { Ticket } from './entities/ticket.entity';
 import { Guest } from './entities/guest.entity';
 import { PaymentModule } from './payment/payment.module';
 import { TicketModule } from './ticket/ticket.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -126,6 +127,7 @@ import { TicketModule } from './ticket/ticket.module';
     BookingModule,
     PaymentModule,
     TicketModule,
+    MailModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
