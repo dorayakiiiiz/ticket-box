@@ -66,26 +66,43 @@ Dưới đây là tóm tắt các luồng kỹ thuật đã được implement v
 5. **Worker chốt đơn:** `OrderProcessor` lấy job ra, mở Postgres Transaction tạo Order (PENDING) và n Ticket. Thành công thì lưu OrderId vào Redis. Thất bại quá số lần cho phép thì chạy Compensating Transaction (`rollbackBooking`) nhả vé lại vào kho.
 6. **FE Polling State Machine:** FE gọi `GET /booking/status` mỗi 2s. Khi status `completed` thì tự navigate sang trang Checkout. Nếu status `failed` (hệ thống lỗi) thì báo FE sinh Idempotency Key mới cho user thử lại.
 
+### 5.4. Luồng Thanh Toán Hiện Đại (Factory & Strategy Pattern)
+Để đảm bảo tính mở rộng khi sau này có thêm MoMo, ZaloPay:
+1. **PaymentFactory:** Dựa vào tham số truyền vào để khởi tạo đúng Strategy (hiện tại là `VnpayStrategy`).
+2. **Circuit Breaker (Opossum):** Bọc quanh lời gọi API sang VNPAY. Nếu VNPAY sập hoặc phản hồi quá chậm, Circuit Breaker sẽ ngắt mạch (Open) và rớt lỗi ngay lập tức thay vì bắt hệ thống TicketBox phải đợi đến kiệt quệ tài nguyên.
+3. **Webhook/IPN:** Hứng dữ liệu từ VNPAY, kiểm tra mã Hash (SHA512) để chống giả mạo, cập nhật trạng thái `Order` sang `PAID` và kích hoạt Job gửi Email chứa QR Code.
+4. **CronJob dọn rác:** Mỗi phút quét các đơn `PENDING` quá 15 phút, tự động chuyển sang `CANCELLED` và gọi Lua Script nhả vé về kho trên Redis.
+
+### 5.5. Luồng Gửi Email Bất Đồng Bộ (BullMQ)
+1. **Gửi Async:** Việc gửi vé (kèm mã QR) cho hàng ngàn user cùng lúc là tác vụ cực kỳ nặng. Cứ có đơn `PAID`, hệ thống chỉ đơn giản ném Job vào Queue `ticketbox.mail` và trả response ngay cho user.
+2. **Strategy Pattern cho Email:** Áp dụng Strategy cho các Provider (SendGrid, Brevo, Nodemailer-Gmail). Nếu Provider A hết hạn ngạch (quota) hoặc bị sập, có thể dễ dàng switch sang Provider B mà không cần sửa code cốt lõi.
+3. **Graceful Shutdown:** Bật `app.enableShutdownHooks()`. Nếu server restart hoặc deploy bản mới, các Worker (Mail, Order) sẽ từ chối nhận Job mới, cố gắng xử lý nốt Job đang chạy rồi mới tắt để không làm rớt thư của khách.
+
+### 5.6. Luồng Bảo Mật & Chống Bot (Defense in Depth)
+Kết hợp nhiều lớp để chặn đứng dân buôn vé (Scalper):
+1. **Lớp 1 (Network/Cloudflare):** Tích hợp *Cloudflare Turnstile Captcha* dạng tàng hình vào form Đăng ký, Quên MK và đặc biệt là nút Đặt Vé. Bot auto-click sẽ không có token Captcha hợp lệ và bị API văng `403 Forbidden` ngay cửa ngõ.
+2. **Lớp 2 (Rate Limiter):** `@nestjs/throttler` bóp 3 req/phút/user cho API Đặt vé và Auth.
+3. **Lớp 3 (Idempotency):** Khóa `SET NX` trên Redis chặn double-click.
+
+### 5.7. Tối Ưu Tải Giao Diện (Chống Lỗi OOM)
+Trang chủ không fetch toàn bộ Database nữa mà sử dụng:
+1. **Phân trang (Pagination) & Lọc sự kiện Hot:** Chỉ hiển thị Top 10 sự kiện HOT trên Hero Banner (dựa vào cột `isHot`), và fetch sự kiện `UPCOMING` theo trang.
+2. **Tìm kiếm (Debounce & Autocomplete):** Gõ tới đâu gọi API xổ dropdown tới đó, delay 300ms chống cháy API. Tích hợp trực tiếp trên Trang chủ, không dùng trang rời.
+3. **Cronjob Cập Nhật Trạng Thái:** Chạy ngầm mỗi đêm quét các sự kiện để tự chuyển từ `UPCOMING` -> `ONGOING` -> `COMPLETED`. Tránh lỗi logic khi admin quên đổi trạng thái.
+
 ## 6. Trạng Thái Hiện Tại & Công Việc Tiếp Theo (Roadmap)
 
 - **Trạng Thái Hiện Tại**: 
   - **[COMPLETED] Phase 1 & 2:** Core API, Auth JWT, Data Modeling, SWR Caching 4 tầng, AI Bio Worker đều đã xong.
-  - **[COMPLETED] Phase 3:** Mọi giao thức khó nhất về Concurrency Booking (Redis Lua, BullMQ Order Worker, Idempotency, Throttler) đã được kiểm chứng và hoàn thiện cả BE lẫn FE. Đơn hàng hiện tạo thành công với trạng thái `PENDING`.
+  - **[COMPLETED] Phase 3:** Mọi giao thức khó nhất về Concurrency Booking (Redis Lua, BullMQ Order Worker, Idempotency, Throttler) đã hoàn thiện cả BE lẫn FE. Đơn hàng hiện tạo thành công với trạng thái `PENDING`.
+  - **[COMPLETED] Phase 4 (Payment & Webhook):** Tích hợp VNPAY với Circuit Breaker, IPN xử lý giao dịch an toàn, Cronjob tự động hủy đơn PENDING quá hạn và nhả vé.
+  - **[COMPLETED] Phase 6 (System Design & Scaling):** 
+    - Áp dụng Factory/Strategy Pattern cho Payment và Mail Provider.
+    - Xử lý bất đồng bộ triệt để luồng gửi Email bằng BullMQ.
+    - Tích hợp Graceful Shutdown chống mất mát Job.
+    - Tối ưu API Homepage: Phân trang, Search Debounce, Cronjob Auto-update Status, ngăn OOM.
+    - Tích hợp Cloudflare Turnstile Captcha chống Bot phe vé (Scalper).
 
 - **Công Việc Tiếp Theo (Roadmap)**:
-  - **[NEXT] Phase 4 (Payment & Webhook):** 
-    - Tích hợp gọi API lấy Link Thanh Toán VNPAY (bọc qua Circuit Breaker Opossum chống sập dính chuyền).
-    - Viết API hứng Webhook (IPN) của VNPAY, mã hóa Hash Checksum để bảo mật, cập nhật Order thành `PAID`.
-    - Viết Cronjob quét DB định kỳ 5 phút/lần: Các Order `PENDING` quá 15 phút sẽ bị chuyển thành `CANCELLED`, và gọi Redis nhả vé cho người khác mua.
-  - **Phase 5 (Offline Check-in):** Xây dựng Flutter app quét QR đồng bộ dữ liệu local SQLite.
-
-## 7. Tài Sản Có Sẵn Cho Phase 4 (What's Already Setup)
-
-Phase 4 tập trung vào Thanh toán và Cronjob, người code Phase 4 KHÔNG cần phải thiết kế lại từ đầu mà sẽ tận dụng toàn bộ bộ khung đã được xây dựng kiên cố từ Phase 3:
-
-- **Entities & Database:** 
-  - Bảng `Order` đã có sẵn các trường `status` (`PENDING`, `PAID`, `CANCELLED`), `totalAmount`, `idempotencyKey`. (Chỉ cần update status).
-  - Bảng `Ticket` đã có sẵn trường `qrCode` (sinh UUID), `status` (`VALID`). 
-- **Rollback Vé (RedisService):** Hàm `this.redisService.rollbackBooking(ticketTypeId, userId, quantity)` đã được viết sẵn và test kỹ ở Phase 3. Trong Cronjob Hủy đơn của Phase 4, chỉ cần lấy list Order hết hạn ra và gọi lại đúng hàm này là vé sẽ tự động quay về kho cho người khác mua.
-- **Frontend Checkout UI:** File `frontend/src/app/checkout/[id]/page.tsx` đã hoàn thiện giao diện nhận `orderId`, hiển thị tổng tiền và 2 phương thức thanh toán. Sang Phase 4 chỉ cần nhét code gọi API lấy `paymentUrl` từ VNPAY và dùng `window.location.href = url` để redirect là xong.
-- **Biến Môi Trường (Config):** Cơ chế `ConfigService` đã load sẵn, Phase 4 chỉ cần bổ sung `VNPAY_TMNCODE` và `VNPAY_HASHSECRET` vào file `.env` là có thể xài ngay.
+  - **[NEXT] Phase 5 (Offline Check-in):** Xây dựng Flutter app quét QR đồng bộ dữ liệu local SQLite. Không cần 4G vẫn soát được vé.
+  - **Phase 7 (Hoàn thiện UI/UX Homepage):** Đổ dữ liệu thật lên giao diện trang chủ mới (Hero Banner 10 HOT Concerts, List Sắp diễn ra, Dropdown Search thực tế).

@@ -4,6 +4,7 @@ import { X, User, Mail, EyeOff, Eye, Loader2, Sparkles } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { useAuthStore } from '../../stores/authStore';
 import { createClient } from '@supabase/supabase-js';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export default function AuthModal({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<"login" | "register" | "forgot">("login");
@@ -11,6 +12,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<"form" | "otp" | "otp-reset">("form"); // For register and reset flows
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
 
   // Form state
   const [email, setEmail] = useState('');
@@ -47,7 +49,12 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
         onClose();
       } else if (tab === 'register') {
         if (step === 'form') {
-          await authService.signup(email, password, fullName);
+          if (!captchaToken) {
+            setError('Vui lòng xác minh Captcha trước khi tiếp tục');
+            setLoading(false);
+            return;
+          }
+          await authService.signup(email, password, fullName, captchaToken);
           setStep('otp');
         } else {
           const code = otp.join('');
@@ -62,7 +69,12 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
         }
       } else if (tab === 'forgot') {
         if (step === 'form') {
-          await authService.forgotPassword(email);
+          if (!captchaToken) {
+            setError('Vui lòng xác minh Captcha trước khi tiếp tục');
+            setLoading(false);
+            return;
+          }
+          await authService.forgotPassword(email, captchaToken);
           setStep('otp-reset');
         } else if (step === 'otp-reset') {
           const code = otp.join('');
@@ -171,6 +183,18 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
               {tab === "login" && (
                 <div className="text-right">
                   <button onClick={() => { setTab('forgot'); setError(''); }} className="text-[11px] md:text-xs text-[#CCFF00] hover:underline">Quên mật khẩu?</button>
+                </div>
+              )}
+
+              {/* CLOUDFLARE TURNSTILE CAPTCHA */}
+              {(tab === "register" || tab === "forgot") && (
+                <div className="flex justify-center mt-2">
+                  <Turnstile 
+                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'} 
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setError('Captcha bị lỗi, vui lòng thử lại')}
+                    options={{ theme: 'dark' }}
+                  />
                 </div>
               )}
 

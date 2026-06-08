@@ -8,6 +8,7 @@ import { bookingService } from '@/services/bookingService';
 import { useAuthStore } from '@/stores/authStore';
 import type { Concert, ConcertAvailability, TicketType } from '@/types';
 import { fmt } from '@/utils/format';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 /**
  * SeatMapPage — Trang chọn khu vực và số lượng vé
@@ -32,6 +33,7 @@ export default function SeatMapPage() {
   // Booking Flow State
   const [bookingState, setBookingState] = useState<'idle' | 'submitting' | 'polling' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
   const idempotencyKeyRef = useRef<string | null>(null);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollFailCount = useRef(0);
@@ -62,11 +64,15 @@ export default function SeatMapPage() {
       if (!isAuthenticated) setErrorMsg('Vui lòng đăng nhập để đặt vé.');
       return;
     }
+    if (!captchaToken) {
+      setErrorMsg('Vui lòng xác minh Captcha (Tick chọn ô bên dưới).');
+      return;
+    }
     setBookingState('submitting');
     setErrorMsg('');
 
     try {
-      const result = await bookingService.createBooking(sel.id, qty, idempotencyKeyRef.current!);
+      const result = await bookingService.createBooking(sel.id, qty, idempotencyKeyRef.current!, captchaToken);
       setBookingState('polling');
       pollFailCount.current = 0;
 
@@ -113,7 +119,7 @@ export default function SeatMapPage() {
   // Fetch concert data (tên, venue, date, ticketTypes) từ Postgres
   useEffect(() => {
     if (!id) return;
-    concertService.getById(id).then(setConcert).catch(() => {});
+    concertService.getById(id).then(setConcert).catch(() => { });
   }, [id]);
 
   // SWR poll availability mỗi 5s — cập nhật số vé real-time từ Redis
@@ -258,13 +264,12 @@ export default function SeatMapPage() {
             {ticketTypes.map(tt => (
               <button key={tt.id} onClick={() => { if (!tt.soldOut) { setSel(tt); setQty(1); } }}
                 disabled={tt.soldOut}
-                className={`flex items-center justify-between px-3 py-2 transition-all border text-left ${
-                  sel?.id === tt.id
+                className={`flex items-center justify-between px-3 py-2 transition-all border text-left ${sel?.id === tt.id
                     ? 'border-[#CCFF00]/50 bg-[#CCFF00]/5'
                     : tt.soldOut
                       ? 'border-transparent opacity-40'
                       : 'border-transparent hover:border-[#222]'
-                }`}>
+                  }`}>
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 shrink-0" style={{ backgroundColor: tt.colorCode || '#CCFF00' }} />
                   <div>
@@ -302,8 +307,19 @@ export default function SeatMapPage() {
                   <span className="text-[11px] text-[#FF2D20]">{errorMsg}</span>
                 </div>
               )}
+
+              {/* CLOUDFLARE TURNSTILE CAPTCHA */}
+              <div className="mb-4 flex justify-center">
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  onError={() => setErrorMsg('Captcha bị lỗi, vui lòng thử lại')}
+                  options={{ theme: 'dark' }}
+                />
+              </div>
+
               {/* Đặt vé và tạo Order */}
-              <button 
+              <button
                 onClick={handleBooking}
                 disabled={bookingState === 'submitting' || bookingState === 'polling'}
                 className="w-full bg-[#CCFF00] text-black font-black uppercase tracking-[0.12em] text-sm py-3 hover:bg-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50">

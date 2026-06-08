@@ -6,8 +6,9 @@ export const authService = {
     return response.data;
   },
 
-  signup: async (email: string, password: string, fullName: string) => {
-    const response = await apiClient.post('/auth/signup', { email, password, fullName });
+  signup: async (email: string, password: string, fullName: string, captchaToken?: string) => {
+    const config = captchaToken ? { headers: { 'x-turnstile-token': captchaToken } } : {};
+    const response = await apiClient.post('/auth/signup', { email, password, fullName }, config);
     return response.data;
   },
 
@@ -21,8 +22,9 @@ export const authService = {
     return response.data;
   },
 
-  forgotPassword: async (email: string) => {
-    const response = await apiClient.post('/auth/forgot-password', { email });
+  forgotPassword: async (email: string, captchaToken?: string) => {
+    const config = captchaToken ? { headers: { 'x-turnstile-token': captchaToken } } : {};
+    const response = await apiClient.post('/auth/forgot-password', { email }, config);
     return response.data;
   },
 

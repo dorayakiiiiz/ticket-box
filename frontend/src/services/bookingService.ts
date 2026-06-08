@@ -24,6 +24,7 @@ export const bookingService = {
     ticketTypeId: string,
     quantity: number,
     idempotencyKey: string,
+    captchaToken: string,
   ): Promise<BookingResponse> => {
     const res = await apiClient.post(
       '/booking',
@@ -32,6 +33,7 @@ export const bookingService = {
         headers: {
           // Header chống double-click — Redis SET NX ở backend
           'Idempotency-Key': idempotencyKey,
+          'x-turnstile-token': captchaToken,
         },
       },
     );
