@@ -11,8 +11,8 @@ import { CaptchaGuard } from 'src/common/guards/captcha.guard';
 export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
-  // Giới hạn gắt gao: 3 requests / 1 phút (60000ms) để chống spam OTP rác
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  // Giới hạn gắt gao: 5 requests / 1 phút (60000ms) để chống spam OTP rác
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Public()
   @UseGuards(CaptchaGuard)
   @Post('signup')
@@ -43,8 +43,8 @@ export class AuthController {
     return this.authService.supabaseOAuthLogin(body.token);
   }
 
-  // Chống Botnet spam email cấp lại mật khẩu (3 req / 1 phút)
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  // Chống Botnet spam email cấp lại mật khẩu (5 req / 1 phút)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Public()
   @UseGuards(CaptchaGuard)
   @Post('forgot-password')
