@@ -110,12 +110,29 @@ export default function SeatMapPage() {
 
       const status = err.response?.status;
       const msg = err.response?.data?.message;
-      if (status === 429) setErrorMsg('Bạn thao tác quá nhanh, vui lòng thử lại.');
-      else if (status === 409) setErrorMsg('Yêu cầu đang xử lý, không bấm lại.');
-      else if (status === 400) setErrorMsg(msg || 'Hết vé hoặc vượt giới hạn.');
-      else if (status === 401) setErrorMsg('Vui lòng đăng nhập để đặt vé.');
-      else if (status === 403) setErrorMsg(msg || 'Bị từ chối truy cập (Lỗi Captcha).');
-      else setErrorMsg('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+      // if (status === 429) setErrorMsg('Bạn thao tác quá nhanh, vui lòng thử lại.');
+      // else if (status === 409) setErrorMsg('Yêu cầu đang xử lý, không bấm lại.');
+      // else if (status === 400) setErrorMsg(msg || 'Hết vé hoặc vượt giới hạn.');
+      // else if (status === 401) setErrorMsg('Vui lòng đăng nhập để đặt vé.');
+      // else if (status === 403) setErrorMsg(msg || 'Bị từ chối truy cập (Lỗi Captcha).');
+      // else setErrorMsg('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+      if (!err.response) {
+        setErrorMsg(`Lỗi Mạng/CORS: Không thể kết nối đến máy chủ. Chi tiết: ${err.message}`);
+      } else if (status === 429) {
+        setErrorMsg('Bạn thao tác quá nhanh, vui lòng thử lại.');
+      } else if (status === 409) {
+        setErrorMsg('Yêu cầu đang xử lý, không bấm lại.');
+      } else if (status === 400) {
+        setErrorMsg(msg || 'Hết vé hoặc vượt giới hạn.');
+      } else if (status === 401) {
+        setErrorMsg('Vui lòng đăng nhập để đặt vé.');
+      } else if (status === 403) {
+        setErrorMsg(msg || 'Bị từ chối truy cập (Lỗi Captcha).');
+      } else if (status === 500) {
+        setErrorMsg(`Lỗi Server (500): ${msg || 'Internal Server Error'}. Hãy check log server Backend!`);
+      } else {
+        setErrorMsg(`Lỗi hệ thống (${status}): ${msg || 'Vui lòng thử lại sau.'}`);
+      }
     }
   }, [sel, qty, isAuthenticated, id, router, captchaToken]);
 
@@ -268,10 +285,10 @@ export default function SeatMapPage() {
               <button key={tt.id} onClick={() => { if (!tt.soldOut) { setSel(tt); setQty(1); } }}
                 disabled={tt.soldOut}
                 className={`flex items-center justify-between px-3 py-2 transition-all border text-left ${sel?.id === tt.id
-                    ? 'border-[#CCFF00]/50 bg-[#CCFF00]/5'
-                    : tt.soldOut
-                      ? 'border-transparent opacity-40'
-                      : 'border-transparent hover:border-[#222]'
+                  ? 'border-[#CCFF00]/50 bg-[#CCFF00]/5'
+                  : tt.soldOut
+                    ? 'border-transparent opacity-40'
+                    : 'border-transparent hover:border-[#222]'
                   }`}>
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 shrink-0" style={{ backgroundColor: tt.colorCode || '#CCFF00' }} />
