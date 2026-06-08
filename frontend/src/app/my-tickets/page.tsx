@@ -8,7 +8,7 @@ import { Ticket as TicketIcon, Calendar, QrCode } from 'lucide-react';
 
 export default function MyTicketsPage() {
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
-  const { token, initialize } = useAuthStore();
+  const { token, initialize, isInitialized } = useAuthStore();
   const router = useRouter();
   
   const [orders, setOrders] = useState<MyOrder[]>([]);
@@ -32,12 +32,14 @@ export default function MyTicketsPage() {
       }
     };
 
-    if (token) {
-      fetchTickets();
-    } else if (token === null) {
-      router.push('/');
+    if (isInitialized) {
+      if (token) {
+        fetchTickets();
+      } else {
+        router.push('/');
+      }
     }
-  }, [token, router]);
+  }, [token, isInitialized, router]);
 
   if (loading) {
     return (
@@ -99,11 +101,11 @@ export default function MyTicketsPage() {
                 </div>
               </div>
 
-              <div className="p-4 sm:p-6 grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="p-4 sm:p-6 grid grid-cols-1 gap-6">
                 {order.tickets.map((ticket, index) => {
                   const accentColor = '#10b981'; // emerald-500
                   return (
-                  <div key={ticket.id} className="relative overflow-hidden border border-white/10 bg-[#111] flex flex-col sm:flex-row w-full rounded-lg">
+                  <div key={ticket.id} className="relative overflow-hidden border border-white/10 bg-[#111] flex flex-col sm:flex-row w-full rounded-none">
                     {/* Left accent stripe */}
                     <div className="w-1.5 shrink-0 hidden sm:block" style={{ backgroundColor: accentColor }} />
                     {/* Top accent stripe for mobile */}
@@ -138,7 +140,7 @@ export default function MyTicketsPage() {
                       
                       {/* Trạng thái */}
                       <div className="mt-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-none text-[10px] sm:text-xs font-bold uppercase tracking-wider ${
                           ticket.status === 'UNUSED' || ticket.status === 'VALID' 
                             ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
                             : 'bg-zinc-800 text-zinc-400 border border-zinc-700'

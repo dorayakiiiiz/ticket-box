@@ -197,7 +197,7 @@ export class PaymentService {
         const ticketListHtml = tickets.map((t, index) => {
           const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(t.qrCode)}`;
           return `
-            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #111111; border: 1px solid #333333; margin-bottom: 24px; border-radius: 12px; border-collapse: collapse; overflow: hidden;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #111111; border: 1px solid #333333; margin-bottom: 24px; border-radius: 0; border-collapse: collapse; overflow: hidden;">
               <tr>
                 <!-- Left side: Info -->
                 <td style="padding: 24px; vertical-align: middle; border-right: 2px dashed #333333; width: 70%;">
@@ -205,14 +205,14 @@ export class PaymentService {
                   <div style="color: #ffffff; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 8px;">${order.ticketType.name}</div>
                   <div style="color: #888888; font-size: 14px; margin-bottom: 16px;">Sự kiện: ${order.ticketType.concert?.name || 'Sự kiện âm nhạc'}</div>
                   
-                  <div style="background-color: #000000; display: inline-block; padding: 8px 12px; border-radius: 6px; border: 1px solid #222222;">
+                  <div style="background-color: #000000; display: inline-block; padding: 8px 12px; border-radius: 0; border: 1px solid #222222;">
                     <div style="color: #555555; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Mã định danh (ID)</div>
                     <div style="color: #ffffff; font-size: 14px; font-family: monospace, Courier;">${t.qrCode}</div>
                   </div>
                 </td>
                 <!-- Right side: QR Code -->
                 <td width="30%" align="center" style="padding: 24px; vertical-align: middle; background-color: #0a0a0a;">
-                  <div style="background-color: #ffffff; padding: 10px; border-radius: 8px; display: inline-block;">
+                  <div style="background-color: #ffffff; padding: 10px; border-radius: 0; display: inline-block;">
                     <img src="${qrUrl}" alt="QR Code" width="120" height="120" style="display: block;" />
                   </div>
                   <div style="color: #555555; font-size: 11px; margin-top: 12px; font-weight: bold; text-transform: uppercase;">Quét để vào cổng</div>
@@ -232,7 +232,7 @@ export class PaymentService {
               </div>
 
               <!-- Order Summary -->
-              <div style="background-color: #111111; border: 1px solid #222222; padding: 24px; border-radius: 8px; margin-bottom: 32px;">
+              <div style="background-color: #111111; border: 1px solid #222222; padding: 24px; border-radius: 0; margin-bottom: 32px;">
                 <h2 style="color: #ffffff; font-size: 20px; margin-top: 0; margin-bottom: 16px;">Cảm ơn bạn đã mua vé!</h2>
                 <table width="100%" cellpadding="0" cellspacing="0" style="color: #cccccc; font-size: 14px;">
                   <tr>
