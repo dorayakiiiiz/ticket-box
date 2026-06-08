@@ -6,13 +6,14 @@ import {
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import type { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import type Redis from 'ioredis';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Concert } from '../entities/concert.entity';
 import { TicketType } from '../entities/ticket-type.entity';
+import { Order, OrderStatus } from '../entities/order.entity';
 import { UserRole } from '../entities/user.entity';
 import { CreateConcertDto, UpdateConcertDto } from './dto/concert.dto';
 import { InjectRedis } from '@nestjs-modules/ioredis';
@@ -30,9 +31,30 @@ export class ConcertService implements OnApplicationBootstrap {
     private readonly logger: PinoLogger,
     @InjectRepository(Concert) private readonly concertRepo: Repository<Concert>,
     @InjectRepository(TicketType) private readonly ticketTypeRepo: Repository<TicketType>,
+    @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
     @InjectQueue(AI_BIO_QUEUE) private readonly aiBioQueue: Queue,
     @InjectRedis() private readonly redis: Redis,
   ) {}
+
+  // Hàm tính toán số lượng vé thực tế từ DB bao gồm cả vé đang bị giam (PENDING)
+  private async calculateAvailableFromDB(ticketType: TicketType): Promise<number> {
+    const expirationThreshold = new Date(Date.now() - 15 * 60 * 1000); // 15 phút
+    
+    // Tìm các đơn hàng PENDING chưa hết hạn của loại vé này
+    const pendingOrders = await this.orderRepo.find({
+      where: {
+        ticketType: { id: ticketType.id },
+        status: OrderStatus.PENDING,
+        createdAt: MoreThan(expirationThreshold),
+      },
+    });
+
+    // Tính tổng số lượng vé đang bị giam
+    const pendingQuantity = pendingOrders.reduce((sum, order) => sum + order.quantity, 0);
+
+    // Tính số vé còn lại: Tổng - Đã bán (PAID) - Đang giam (PENDING)
+    return ticketType.totalQuantity - ticketType.soldQuantity - pendingQuantity;
+  }
 
   // ─── Lifecycle Hook ──────────────────────────────────────────────────────────
 
@@ -46,7 +68,9 @@ export class ConcertService implements OnApplicationBootstrap {
 
       const pipeline = this.redis.pipeline();
       for (const t of types) {
-        const available = t.totalQuantity - t.soldQuantity;
+        // [FIXED] Tính vé bằng hàm chính xác để tránh Overselling
+        const available = await this.calculateAvailableFromDB(t);
+        
         // SET NX: chỉ set nếu key chưa tồn tại — không overwrite data đang live
         pipeline.set(redisKey(t.id), available, 'NX');
       }
@@ -135,7 +159,9 @@ export class ConcertService implements OnApplicationBootstrap {
       throw new ForbiddenException('Chỉ ban tổ chức mới có quyền xóa concert');
     }
     const concert = await this.findOne(id);
-    await this.concertRepo.remove(concert);
+    
+    // [FIXED] Dùng softRemove thay vì remove cứng để bảo vệ dữ liệu tài chính (Order, Ticket)
+    await this.concertRepo.softRemove(concert);
   }
 
   // ─── Availability (đọc từ Redis, fallback Postgres) ──────────────────────────
@@ -155,7 +181,8 @@ export class ConcertService implements OnApplicationBootstrap {
           available = parseInt(raw, 10);
         } else {
           // Cold miss — tính từ Postgres và SET Redis để warm cache
-          available = t.totalQuantity - t.soldQuantity;
+          // [FIXED] Tính vé bằng hàm chính xác để tránh Overselling
+          available = await this.calculateAvailableFromDB(t);
           await this.redis.set(redisKey(t.id), available);
           this.logger.debug(`Cache miss: warmed ticket_type:${t.id}:available = ${available}`);
         }

@@ -7,8 +7,10 @@ import { Order, OrderStatus, PaymentMethod } from '../entities/order.entity';
 import { Ticket, TicketStatus } from '../entities/ticket.entity';
 import { TicketType } from '../entities/ticket-type.entity';
 
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
+
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { MailService } from '../mail/mail.service';
 
 /**
  * PaymentService — Trung tâm xử lý thanh toán Phase 4
@@ -26,8 +28,8 @@ export class PaymentService {
     private readonly logger: PinoLogger,
     private readonly paymentFactory: PaymentFactory,
     private readonly dataSource: DataSource,
-    private readonly mailService: MailService,
-  ) {}
+    @InjectQueue('mail-queue') private readonly mailQueue: Queue,
+  ) { }
 
   /**
    * Tạo URL thanh toán cho đơn hàng
@@ -117,7 +119,7 @@ export class PaymentService {
       // Việc này sinh ra câu query sạch: SELECT * FROM orders WHERE orderCode = $1 FOR UPDATE
       const order = await queryRunner.manager.findOne(Order, {
         where: { orderCode: orderCode },
-        lock: { mode: 'pessimistic_write' }, 
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) {
@@ -170,7 +172,7 @@ export class PaymentService {
         ticket.order = order;
         ticket.ticketType = order.ticketType;
         ticket.user = order.user;
-        ticket.qrCode = uuidv4(); 
+        ticket.qrCode = uuidv4();
         ticket.status = TicketStatus.VALID;
         tickets.push(ticket);
       }
@@ -257,7 +259,7 @@ export class PaymentService {
 
               <!-- Footer -->
               <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #222222; text-align: center;">
-                <p style="color: #ff3333; font-size: 13px; margin: 0 0 8px 0; font-weight: bold;">⚠️ BẢO MẬT VÉ QUAN TRỌNG</p>
+                <p style="color: #ff3333; font-size: 13px; margin: 0 0 8px 0; font-weight: bold;">QUY ĐỊNH</p>
                 <p style="color: #666666; font-size: 12px; margin: 0 0 20px 0;">Tuyệt đối KHÔNG chia sẻ mã QR này hoặc đăng tải lên mạng xã hội để tránh bị kẻ gian đánh cắp vé.</p>
                 <p style="color: #444444; font-size: 11px; margin: 0;">© 2026 TicketZ. All rights reserved.</p>
               </div>
@@ -265,13 +267,15 @@ export class PaymentService {
           </div>
         `;
 
-        // We run email sending asynchronously without blocking the webhook response
-        this.mailService.sendMail(
-          emailToSend,
-          `Vé điện tử của bạn - Đơn hàng ${orderCode}`,
-          htmlContent
-        ).catch(e => {
-          this.logger.error({ err: e }, `Failed to send E-Ticket email for order ${orderCode}`);
+        // We run email sending via Message Queue for high reliability & retry support
+        await this.mailQueue.add('send-ticket', {
+          type: 'send-ticket',
+          to: emailToSend,
+          subject: `Vé điện tử của bạn - Đơn hàng ${orderCode}`,
+          html: htmlContent,
+        }, {
+          attempts: 5,
+          backoff: { type: 'exponential', delay: 5000 },
         });
       }
 
@@ -285,7 +289,7 @@ export class PaymentService {
         `[ERROR] Failed to process webhook for order ${orderCode} — rolled back`,
       );
 
-      throw error; 
+      throw error;
     } finally {
       await queryRunner.release();
     }

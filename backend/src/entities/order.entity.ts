@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
 import { User } from './user.entity';
 import { Concert } from './concert.entity';
 import { Ticket } from './ticket.entity';
@@ -17,6 +17,8 @@ export enum PaymentMethod {
 }
 
 @Entity('orders')
+// Index phục vụ cho Cronjob quét hóa đơn PENDING hết hạn
+@Index(['status', 'createdAt'])
 export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;

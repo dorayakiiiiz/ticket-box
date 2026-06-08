@@ -4,6 +4,9 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { DataSource, LessThan, In } from 'typeorm';
 import { RedisService } from '../redis/redis.service';
 import { Order, OrderStatus } from '../entities/order.entity';
+import { Concert, ConcertStatus } from '../entities/concert.entity';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 /**
  * CronService — Cronjob dọn dẹp đơn hàng "treo" Phase 4
@@ -25,6 +28,7 @@ export class CronService {
     private readonly logger: PinoLogger,
     private readonly dataSource: DataSource,
     private readonly redisService: RedisService,
+    @InjectQueue('mail-queue') private readonly mailQueue: Queue,
   ) {}
 
   /**
@@ -171,6 +175,97 @@ export class CronService {
           `🔧 Self-heal FAILED: Đơn ${order.orderCode} vẫn chưa hoàn được Redis. Sẽ thử lại.`,
         );
       }
+    }
+  }
+
+  /**
+   * Nhiệm vụ 3: Nhắc nhở sự kiện trước 24 giờ
+   * 
+   * Chạy mỗi 30 phút. Tìm các concert sắp diễn ra (<= 24h) và chưa nhắc nhở
+   */
+  @Cron(CronExpression.EVERY_30_MINUTES)
+  async handleEventReminders(): Promise<void> {
+    const lockKey = 'cronjob:lock:sendEventReminders';
+    const lockTTL = 20 * 60; // Khóa trong 20 phút
+
+    const acquired = await this.redisService.acquireLock(lockKey, lockTTL);
+    if (!acquired) {
+      this.logger.info('⏰ Cronjob Reminder: Server khác đang chạy. Bỏ qua.');
+      return;
+    }
+
+    this.logger.info('⏰ Cronjob Reminder: Bắt đầu quét các Concert sắp diễn ra...');
+
+    try {
+      const now = new Date();
+      const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      const concerts = await this.dataSource.getRepository(Concert).find({
+        where: {
+          status: ConcertStatus.UPCOMING,
+          isReminded: false,
+          date: LessThan(in24Hours),
+        },
+      });
+
+      if (concerts.length === 0) {
+        this.logger.info('⏰ Cronjob Reminder: Không có concert nào cần nhắc nhở lúc này.');
+        return;
+      }
+
+      for (const concert of concerts) {
+        // Chỉ nhắc những concert có giờ diễn ra lớn hơn hiện tại
+        if (concert.date <= now) continue;
+
+        this.logger.info(`⏰ Tiến hành gửi nhắc nhở cho concert ${concert.name} (ID: ${concert.id})...`);
+
+        // Tìm tất cả vé đã thanh toán
+        const orders = await this.dataSource.getRepository(Order).find({
+          where: {
+            concert: { id: concert.id },
+            status: OrderStatus.PAID,
+          },
+          relations: { user: true },
+        });
+
+        let sentCount = 0;
+        for (const order of orders) {
+          const email = order.guestEmail || order.user?.email;
+          const name = order.guestName || order.user?.fullName || 'Khán giả';
+
+          if (!email) continue;
+
+          await this.mailQueue.add('send-reminder', {
+            type: 'send-reminder',
+            to: email,
+            subject: `[Nhắc nhở] Sự kiện ${concert.name} sắp diễn ra!`,
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #333; background: #0a0a0a; color: #fff; padding: 20px;">
+                <h1 style="color: #CCFF00; text-transform: uppercase;">TicketZ Reminder</h1>
+                <p>Xin chào ${name},</p>
+                <p>Sự kiện <b>${concert.name}</b> sẽ diễn ra trong vòng chưa đầy 24 giờ nữa. Bạn đã chuẩn bị sẵn sàng chưa?</p>
+                <p><b>Thời gian:</b> ${concert.date.toLocaleString('vi-VN')}</p>
+                <p><b>Địa điểm:</b> ${concert.venue}, ${concert.city}</p>
+                <p>Vui lòng chuẩn bị sẵn mã QR vé điện tử (trong email nhận vé hoặc lịch sử mua vé) để check-in tại sự kiện.</p>
+                <br />
+                <p>Hẹn gặp bạn tại đêm diễn!</p>
+                <p style="color: #CCFF00;"><b>TicketZ Team</b></p>
+              </div>
+            `,
+          }, {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 2000 },
+          });
+
+          sentCount++;
+        }
+
+        concert.isReminded = true;
+        await this.dataSource.getRepository(Concert).save(concert);
+        this.logger.info(`✅ Hoàn tất gửi ${sentCount} email nhắc nhở cho concert ${concert.name}`);
+      }
+    } catch (error) {
+      this.logger.error({ err: error }, 'Lỗi trong quá trình chạy cronjob reminder');
     }
   }
 }

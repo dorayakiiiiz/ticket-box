@@ -20,12 +20,14 @@ import { Order } from '../entities/order.entity';
  * - BookingService: logic nghiệp vụ
  * - OrderProcessor: BullMQ Worker xử lý tạo order trong Postgres
  */
+import { Concert } from '../entities/concert.entity';
 import { CronService } from './cron.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TicketType, Order]),
+    TypeOrmModule.forFeature([TicketType, Order, Concert]),
     BullModule.registerQueue({ name: 'ticketbox.order' }),
+    BullModule.registerQueue({ name: 'mail-queue' }),
     TicketRedisModule,
   ],
   controllers: [BookingController],

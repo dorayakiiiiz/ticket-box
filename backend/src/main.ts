@@ -29,6 +29,12 @@ async function bootstrap() {
 
   app.useGlobalFilters(new AllExceptionsFilter());
 
+  // [FIXED] Bật Graceful Shutdown.
+  // Khi Docker hoặc Server gởi lệnh tắt (SIGTERM), NestJS sẽ không sập ngay lập tức.
+  // Nó sẽ thông báo cho các module (như BullMQ Worker) ngưng nhận việc mới, 
+  // hoàn thành nốt các job đang chạy dở rồi mới an toàn tắt nguồn.
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 8080);
 }
 bootstrap();

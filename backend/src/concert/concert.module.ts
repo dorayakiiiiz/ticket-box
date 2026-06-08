@@ -10,10 +10,12 @@ import { AiBioProcessor } from './ai-bio.processor';
 import { AiProviderModule } from '../ai-provider/ai-provider.module';
 
 
+import { Order } from '../entities/order.entity';
+
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([Concert, TicketType]), // TicketType cần cho warm-up
+    TypeOrmModule.forFeature([Concert, TicketType, Order]), // TicketType cần cho warm-up, Order cho tính pending vé
     BullModule.registerQueue({ name: 'ticketbox.concert.ai-bio' }),
     AiProviderModule,
   ],
