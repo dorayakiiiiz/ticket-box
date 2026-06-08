@@ -114,7 +114,7 @@ export default function SeatMapPage() {
       else if (status === 401) setErrorMsg('Vui lòng đăng nhập để đặt vé.');
       else setErrorMsg('Đã xảy ra lỗi. Vui lòng thử lại sau.');
     }
-  }, [sel, qty, isAuthenticated, id, router]);
+  }, [sel, qty, isAuthenticated, id, router, captchaToken]);
 
   // Fetch concert data (tên, venue, date, ticketTypes) từ Postgres
   useEffect(() => {
