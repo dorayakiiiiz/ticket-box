@@ -3,6 +3,7 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto, SignupDto, SupabaseLoginDto, VerifyOtpDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { Public } from 'src/common/guards/jwt.strategy';
+import { CaptchaGuard } from 'src/common/guards/captcha.guard';
 
 // Bật Throttler Guard cho toàn bộ AuthController
 @UseGuards(ThrottlerGuard)
@@ -13,6 +14,7 @@ export class AuthController {
   // Giới hạn gắt gao: 3 requests / 1 phút (60000ms) để chống spam OTP rác
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Public()
+  @UseGuards(CaptchaGuard)
   @Post('signup')
   signup(@Body() body: SignupDto) {
     return this.authService.signup(body.email, body.password, body.fullName);
@@ -44,7 +46,9 @@ export class AuthController {
   // Chống Botnet spam email cấp lại mật khẩu (3 req / 1 phút)
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Public()
+  @UseGuards(CaptchaGuard)
   @Post('forgot-password')
+
   @HttpCode(HttpStatus.OK)
   forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.authService.forgotPassword(body.email);

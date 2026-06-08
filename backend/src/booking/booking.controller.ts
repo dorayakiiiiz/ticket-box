@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { IdempotencyGuard } from '../common/guards/idempotency.guard';
+import { CaptchaGuard } from '../common/guards/captcha.guard';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/booking.dto';
 import { Public } from '../common/guards/jwt.strategy';
@@ -30,8 +31,9 @@ export class BookingController {
    *
    * Guard chain (thứ tự thực thi):
    * 1. JwtAuthGuard (global) — xác thực user
-   * 2. ThrottlerGuard — rate limit 3 req/giây/user, chặn bot
-   * 3. IdempotencyGuard — chặn double-click bằng Redis SET NX
+   * 2. ThrottlerGuard — rate limit 3 req/phút/user, chặn bot
+   * 3. CaptchaGuard — xác thực hành vi người dùng
+   * 4. IdempotencyGuard — chặn double-click bằng Redis SET NX
    *
    * Body: { ticketTypeId: string, quantity: number }
    * Header: Idempotency-Key: <UUID>
@@ -42,7 +44,7 @@ export class BookingController {
    * Response 429: Rate limit exceeded
    */
   @Post()
-  @UseGuards(ThrottlerGuard, IdempotencyGuard)
+  @UseGuards(ThrottlerGuard, CaptchaGuard, IdempotencyGuard)
   @Throttle({ default: { limit: 3, ttl: 1000 } }) // Tối đa 3 request / 1 giây
   @HttpCode(HttpStatus.ACCEPTED) // 202 — "Đang xử lý"
   async bookTickets(
