@@ -207,15 +207,15 @@ export default function AdminAIBioPage() {
         {/* ─── Left Column: Upload + Concert Select ─── */}
         <div>
           {/* Upload Section */}
-          <div className="bg-white border border-gray-200 rounded-sm p-6 mb-6">
+          <div className="bg-white border border-gray-200 p-6 mb-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Tải lên Press Kit</h3>
 
             {!file ? (
               /* Empty state — dotted upload zone */
-              <div className="border-2 border-dashed border-gray-300 rounded-sm p-8 text-center mb-4">
+              <div className="border-2 border-dashed border-gray-300 p-8 text-center mb-4">
                 <Brain size={48} className="mx-auto text-gray-400 mb-4" />
                 <p className="text-sm text-gray-600 mb-4">Tải lên file PDF Press Kit hoặc Artist Profile</p>
-                <label className="bg-gray-900 text-white font-bold text-sm px-6 py-3 rounded-sm hover:bg-gray-800 transition-colors cursor-pointer inline-block">
+                <label className="bg-gray-900 text-white font-bold text-sm px-6 py-3 hover:bg-gray-800 transition-colors cursor-pointer inline-block">
                   Chọn PDF
                   <input
                     type="file"
@@ -227,9 +227,9 @@ export default function AdminAIBioPage() {
               </div>
             ) : (
               /* File selected — info + re-upload */
-              <div className="border border-gray-200 rounded-sm p-5 mb-4">
+              <div className="border border-gray-200 p-5 mb-4">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gray-100 rounded-sm flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-gray-100 flex items-center justify-center shrink-0">
                     <span className="text-xs font-black text-gray-500 uppercase">PDF</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -244,7 +244,7 @@ export default function AdminAIBioPage() {
                     </svg>
                   </div>
                 </div>
-                <label className={`w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-bold text-sm px-4 py-2.5 rounded-sm transition-colors ${
+                <label className={`w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-bold text-sm px-4 py-2.5 transition-colors ${
                   processing
                     ? 'opacity-40 cursor-not-allowed pointer-events-none bg-gray-50'
                     : 'hover:bg-gray-50 cursor-pointer bg-white'
@@ -264,7 +264,7 @@ export default function AdminAIBioPage() {
 
             {/* Fix #1: Client-side file validation error */}
             {fileError && (
-              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-sm px-4 py-3 mb-4">
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 px-4 py-3 mb-4">
                 <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-red-600 font-medium">{fileError}</p>
               </div>
@@ -277,14 +277,14 @@ export default function AdminAIBioPage() {
           </div>
 
           {/* Concert Selection */}
-          <div className="bg-white border border-gray-200 rounded-sm p-6">
+          <div className="bg-white border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Chọn concert</h3>
             {/* Fix #7: Disable select khi đang processing */}
             <select
               value={selectedConcertId}
               onChange={e => setSelectedConcertId(e.target.value)}
               disabled={processing}
-              className={`w-full px-4 py-3 bg-white border border-gray-200 rounded-sm text-sm focus:outline-none focus:border-gray-400 mb-4 ${
+              className={`w-full px-4 py-3 bg-white border border-gray-200 text-sm focus:outline-none focus:border-gray-400 mb-4 ${
                 processing ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -298,7 +298,7 @@ export default function AdminAIBioPage() {
             <button
               onClick={handleGenerate}
               disabled={processing || !file || !selectedConcertId || !!fileError}
-              className="w-full bg-[#CCFF00] text-black font-bold text-sm px-6 py-3 rounded-sm hover:bg-[#B8E600] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-3"
+              className="w-full bg-[#CCFF00] text-black font-bold text-sm px-6 py-3 hover:bg-[#B8E600] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-3"
             >
               {processing ? 'Đang xử lý...' : 'Tạo Bio bằng AI'}
             </button>
@@ -308,7 +308,7 @@ export default function AdminAIBioPage() {
               <button
                 onClick={handleReset}
                 disabled={isResetting}
-                className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 font-semibold text-sm px-4 py-2.5 rounded-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 font-semibold text-sm px-4 py-2.5 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 <RotateCcw size={14} className={isResetting ? 'animate-spin' : ''} />
                 {isResetting ? 'Đang reset...' : 'Reset AI Bio Status'}
@@ -317,7 +317,7 @@ export default function AdminAIBioPage() {
 
             {/* Error display */}
             {error && (
-              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-sm px-4 py-3 mt-3">
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 px-4 py-3 mt-3">
                 <AlertTriangle size={16} className="text-red-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-red-600 font-medium">{error}</p>
               </div>
@@ -326,7 +326,7 @@ export default function AdminAIBioPage() {
         </div>
 
         {/* ─── Right Column: Preview ─── */}
-        <div className="bg-white border border-gray-200 rounded-sm p-6">
+        <div className="bg-white border border-gray-200 p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Preview</h3>
           {processing ? (
             <div className="flex items-center justify-center h-64">
@@ -344,17 +344,17 @@ export default function AdminAIBioPage() {
                 value={bioResult}
                 onChange={e => setBioResult(e.target.value)}
                 rows={12}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-sm text-sm focus:outline-none focus:border-gray-400 resize-none mb-4"
+                className="w-full px-4 py-3 bg-white border border-gray-200 text-sm focus:outline-none focus:border-gray-400 resize-none mb-4"
               />
               {saveSuccess && (
-                <div className="mb-3 bg-green-50 border border-green-200 rounded-sm px-4 py-3 text-sm font-semibold text-green-700">
+                <div className="mb-3 bg-green-50 border border-green-200 px-4 py-3 text-sm font-semibold text-green-700">
                   ✓ Đã lưu Bio thành công!
                 </div>
               )}
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="w-full bg-gray-900 text-white font-bold text-sm px-6 py-3 rounded-sm hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gray-900 text-white font-bold text-sm px-6 py-3 hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Đang lưu...' : 'Lưu Bio'}
               </button>

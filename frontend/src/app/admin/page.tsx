@@ -5,13 +5,13 @@ import { DollarSign, Ticket, Calendar, Users, TrendingUp } from 'lucide-react';
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
 function fmt(n: number) { return n.toLocaleString('vi-VN'); }
 
-/* Figma: AdminStatCard — bg-white border border-gray-200 rounded-lg p-6 */
+/* Figma: AdminStatCard — bg-white border border-gray-200 p-6 */
 function StatCard({ title, value, icon, trend, trendValue }: { title: string; value: string; icon: React.ReactNode; trend?: 'up' | 'down'; trendValue?: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-sm p-6">
+    <div className="bg-white border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm font-medium text-gray-600">{title}</p>
-        <div className="w-10 h-10 bg-gray-100 rounded-sm flex items-center justify-center text-gray-600">
+        <div className="w-10 h-10 bg-gray-100 flex items-center justify-center text-gray-600">
           {icon}
         </div>
       </div>
@@ -50,8 +50,8 @@ export default function AdminDashboard() {
         <StatCard title="Khách hàng" value="5,234" icon={<Users size={20} />} trend="up" trendValue="+15.3%" />
       </div>
 
-      {/* Recent Orders — Figma: bg-white border rounded-lg table */}
-      <div className="bg-white border border-gray-200 rounded-sm">
+      {/* Recent Orders — Figma: bg-white border table */}
+      <div className="bg-white border border-gray-200">
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h2 style={D} className="text-xl font-black uppercase italic text-gray-900">Đơn hàng gần đây</h2>
           <Link href="/admin/orders" className="text-sm font-semibold text-gray-600 hover:text-gray-900">Xem tất cả →</Link>
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
                   <td className="px-6 py-4 text-sm text-gray-600">{order.user}</td>
                   <td className="px-6 py-4 text-sm font-bold text-gray-900">{fmt(order.total)}đ</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-block text-xs font-bold px-2 py-1 rounded-sm ${
+                    <span className={`inline-block text-xs font-bold px-2 py-1 ${
                       order.status === 'PAID' ? 'bg-green-100 text-green-700' :
                       order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
                       'bg-red-100 text-red-700'

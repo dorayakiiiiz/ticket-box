@@ -1,6 +1,6 @@
 'use client';
 import apiClient from './apiClient';
-import type { Concert } from '../types';
+import type { Concert, CreateTicketTypePayload, UpdateTicketTypePayload, TicketType } from '../types';
 
 type CreateConcertPayload = {
   name: string;
@@ -60,5 +60,21 @@ export const adminService = {
   resetBio: async (concertId: string): Promise<{ message: string }> => {
     const res = await apiClient.post(`/concerts/${concertId}/reset-bio`);
     return res.data;
+  },
+
+  // ─── Ticket Type CRUD ────────────────────────────────────────────────────────
+
+  createTicketType: async (concertId: string, payload: CreateTicketTypePayload): Promise<TicketType> => {
+    const res = await apiClient.post(`/concerts/${concertId}/ticket-types`, payload);
+    return res.data;
+  },
+
+  updateTicketType: async (concertId: string, typeId: string, payload: UpdateTicketTypePayload): Promise<TicketType> => {
+    const res = await apiClient.put(`/concerts/${concertId}/ticket-types/${typeId}`, payload);
+    return res.data;
+  },
+
+  deleteTicketType: async (concertId: string, typeId: string): Promise<void> => {
+    await apiClient.delete(`/concerts/${concertId}/ticket-types/${typeId}`);
   },
 };

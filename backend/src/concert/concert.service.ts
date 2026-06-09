@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException,
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,6 +17,7 @@ import { TicketType } from '../entities/ticket-type.entity';
 import { Order, OrderStatus } from '../entities/order.entity';
 import { UserRole } from '../entities/user.entity';
 import { CreateConcertDto, UpdateConcertDto } from './dto/concert.dto';
+import { CreateTicketTypeDto, UpdateTicketTypeDto } from './dto/ticket-type.dto';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 
 const AI_BIO_QUEUE = 'ticketbox.concert.ai-bio';
@@ -162,6 +164,94 @@ export class ConcertService implements OnApplicationBootstrap {
     
     // [FIXED] Dùng softRemove thay vì remove cứng để bảo vệ dữ liệu tài chính (Order, Ticket)
     await this.concertRepo.softRemove(concert);
+  }
+
+  // ─── Ticket Type CRUD ────────────────────────────────────────────────────────
+
+  async createTicketType(
+    concertId: string,
+    dto: CreateTicketTypeDto,
+    user: { id: string; role: UserRole },
+  ): Promise<TicketType> {
+    if (user.role !== UserRole.ORGANIZER) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền thêm loại vé');
+    }
+    const concert = await this.findOne(concertId); // 404 nếu concert không tồn tại
+
+    const ticketType = this.ticketTypeRepo.create({ ...dto, concert });
+    const saved = await this.ticketTypeRepo.save(ticketType);
+
+    // Seed Redis ngay — nhất quán với onApplicationBootstrap
+    await this.redis.set(redisKey(saved.id), dto.totalQuantity);
+    this.logger.info(`Created ticket type ${saved.id} for concert ${concertId}, seeded Redis = ${dto.totalQuantity}`);
+
+    return saved;
+  }
+
+  async updateTicketType(
+    concertId: string,
+    typeId: string,
+    dto: UpdateTicketTypeDto,
+    user: { id: string; role: UserRole },
+  ): Promise<TicketType> {
+    if (user.role !== UserRole.ORGANIZER) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền cập nhật loại vé');
+    }
+
+    const ticketType = await this.ticketTypeRepo.findOne({
+      where: { id: typeId, concert: { id: concertId } },
+    });
+    if (!ticketType) throw new NotFoundException('Loại vé không tồn tại');
+
+    // Guard: không được giảm totalQuantity xuống dưới số đã bán
+    if (dto.totalQuantity !== undefined && dto.totalQuantity < ticketType.soldQuantity) {
+      throw new BadRequestException(
+        `Không thể giảm số lượng xuống ${dto.totalQuantity} vì đã bán ${ticketType.soldQuantity} vé`,
+      );
+    }
+
+    // Sync Redis nếu totalQuantity thay đổi: dùng INCRBY để giữ đồng bộ với booking flow
+    if (dto.totalQuantity !== undefined && dto.totalQuantity !== ticketType.totalQuantity) {
+      const delta = dto.totalQuantity - ticketType.totalQuantity;
+      await this.redis.incrby(redisKey(typeId), delta);
+      this.logger.info(`Updated ticket type ${typeId} totalQuantity delta=${delta}, Redis synced`);
+    }
+
+    await this.ticketTypeRepo.update(typeId, dto);
+    return this.ticketTypeRepo.findOne({ where: { id: typeId } }) as Promise<TicketType>;
+  }
+
+  async removeTicketType(
+    concertId: string,
+    typeId: string,
+    user: { id: string; role: UserRole },
+  ): Promise<void> {
+    if (user.role !== UserRole.ORGANIZER) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền xóa loại vé');
+    }
+
+    const ticketType = await this.ticketTypeRepo.findOne({
+      where: { id: typeId, concert: { id: concertId } },
+    });
+    if (!ticketType) throw new NotFoundException('Loại vé không tồn tại');
+
+    // Guard: chặn xóa nếu còn Order PAID hoặc PENDING chưa hết hạn
+    const activeOrderCount = await this.orderRepo.count({
+      where: [
+        { ticketType: { id: typeId }, status: OrderStatus.PAID },
+        { ticketType: { id: typeId }, status: OrderStatus.PENDING },
+      ],
+    });
+    if (activeOrderCount > 0) {
+      throw new ConflictException(
+        `Không thể xóa loại vé đang có ${activeOrderCount} đơn hàng`,
+      );
+    }
+
+    // Xóa Redis key trước để đảm bảo availability endpoint không trả stale data
+    await this.redis.del(redisKey(typeId));
+    await this.ticketTypeRepo.remove(ticketType);
+    this.logger.info(`Removed ticket type ${typeId} from concert ${concertId}`);
   }
 
   // ─── Availability (đọc từ Redis, fallback Postgres) ──────────────────────────
