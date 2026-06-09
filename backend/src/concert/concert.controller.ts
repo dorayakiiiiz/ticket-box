@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConcertService } from './concert.service';
 import { CreateConcertDto, UpdateConcertDto } from './dto/concert.dto';
+import { CreateTicketTypeDto, UpdateTicketTypeDto } from './dto/ticket-type.dto';
 import { Public } from 'src/common/guards/jwt.strategy';
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
@@ -76,5 +77,36 @@ export class ConcertController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string, @Req() req: any) {
     return this.concertService.remove(id, req.user);
+  }
+
+  // ─── Ticket Type CRUD ────────────────────────────────────────────────────────
+
+  @Post(':id/ticket-types')
+  createTicketType(
+    @Param('id') concertId: string,
+    @Body() dto: CreateTicketTypeDto,
+    @Req() req: any,
+  ) {
+    return this.concertService.createTicketType(concertId, dto, req.user);
+  }
+
+  @Put(':id/ticket-types/:typeId')
+  updateTicketType(
+    @Param('id') concertId: string,
+    @Param('typeId') typeId: string,
+    @Body() dto: UpdateTicketTypeDto,
+    @Req() req: any,
+  ) {
+    return this.concertService.updateTicketType(concertId, typeId, dto, req.user);
+  }
+
+  @Delete(':id/ticket-types/:typeId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeTicketType(
+    @Param('id') concertId: string,
+    @Param('typeId') typeId: string,
+    @Req() req: any,
+  ) {
+    return this.concertService.removeTicketType(concertId, typeId, req.user);
   }
 }

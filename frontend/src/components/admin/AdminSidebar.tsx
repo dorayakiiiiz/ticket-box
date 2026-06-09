@@ -45,7 +45,7 @@ export default function AdminSidebar() {
             <Link
               key={href}
               href={href}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-sm transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors ${
                 active
                   ? 'bg-gray-900 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -62,7 +62,7 @@ export default function AdminSidebar() {
       <div className="p-4 border-t border-gray-200">
         <button
           onClick={() => { logout(); router.push('/'); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-sm transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
         >
           <LogOut size={16} />
           Về trang chủ
