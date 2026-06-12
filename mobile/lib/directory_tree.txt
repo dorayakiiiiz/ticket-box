@@ -1,0 +1,34 @@
+lib/
+│
+├── main.dart                          # Khởi tạo app, MultiProvider
+│
+├── models/                            # Định nghĩa dữ liệu
+│   ├── user_model.dart                # User, token, role
+│   ├── concert_model.dart             # Concert (id, name, date, venue)
+│   └── ticket_model.dart              # Ticket (qrPayload, status, synced)
+│
+├── services/                          # Gọi API & Database
+│   ├── api_service.dart               # ĐÃ CÓ (giữ nguyên)
+│   ├── auth_api_service.dart          # Login, Logout API
+│   ├── concert_api_service.dart       # Fetch concerts API
+│   ├── sync_api_service.dart          # Sync tickets, checkins API
+│   └── local_database_service.dart    # SQLite (users, concerts, tickets)
+│
+├── repositories/                      # Xử lý logic dữ liệu
+│   ├── auth_repository.dart           # Login, logout, lưu user
+│   ├── concert_repository.dart        # Lấy danh sách concert
+│   └── ticket_repository.dart         # Sync, validate, check-in ticket
+│
+├── providers/                         # State management
+│   ├── auth_provider.dart             # Auth state (loading, error, user)
+│   ├── concert_provider.dart          # Concert state (danh sách concerts)
+│   └── ticket_provider.dart           # Ticket state (sync, validate)
+│
+├── utils/                             # Tiện ích
+│   └── network_sync_service.dart      # Background sync khi có mạng
+│
+└── screens/                           # Màn hình UI
+    ├── login_screen.dart              # Đăng nhập (dùng AuthProvider)
+    ├── concert_selection_screen.dart  # Chọn sự kiện (dùng ConcertProvider)
+    ├── concert_loading_screen.dart    # Loading (ĐÃ CÓ)
+    └── scanner_screen.dart            # Quét vé (dùng TicketProvider)
