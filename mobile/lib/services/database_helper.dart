@@ -109,6 +109,13 @@ class DatabaseHelper {
     await db.delete('users');
   }
 
+
+  Future<void> resetDatabase() async {
+    String path = join(await getDatabasesPath(), 'ticketbox.db');
+    await deleteDatabase(path);
+    print('Database deleted');
+  }
+
   // ============ CONCERT METHODS ============
 
 

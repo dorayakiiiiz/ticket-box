@@ -43,10 +43,10 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
         duration: Duration(seconds: 2),
       ),
     );
+    //tạo thời comment để chạy local
+    //if (authProvider.currentUser == null) return;
 
-    if (authProvider.currentUser == null) return;
-
-    final success = await ticketProvider.syncTickets(concertId, authProvider.currentUser!.token);
+    final success = await ticketProvider.syncTickets(concertId);
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

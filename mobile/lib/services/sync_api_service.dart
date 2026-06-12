@@ -13,10 +13,7 @@ class SyncApiService {
   // Lấy danh sách tickets của concert
   Future<List<TicketModel>> fetchTickets(String concertId) async {
     try {
-      final response = await _dio.get(
-        '/tickets',
-        queryParameters: {'concertId': concertId},
-      );
+      final response = await _dio.get('/tickets/sync/$concertId');
       final List<dynamic> data = response.data;
       return data.map((json) => TicketModel.fromJson(json)).toList();
     } catch (e) {
@@ -24,7 +21,7 @@ class SyncApiService {
     }
   }
 
-  // Gửi danh sách vé đã check-in lên server (sync ngược)
+  // Gửi danh sách vé đã check-in lên server
   Future<void> syncCheckins(List<Map<String, dynamic>> checkins) async {
     try {
       await _dio.post('/sync/checkins', data: {'checkins': checkins});

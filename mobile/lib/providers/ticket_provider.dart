@@ -19,14 +19,14 @@ class TicketProvider extends ChangeNotifier {
   String? get validationMessage => _validationMessage;
   bool get validationSuccess => _validationSuccess;
   
-  // Đồng bộ vé offline
-  Future<bool> syncTickets(String concertId, String token) async {
+
+  Future<bool> syncTickets(String concertId) async {
     _isSyncing = true;
     _syncError = null;
     notifyListeners();
     
     try {
-      await _repository.syncTicketsOffline(concertId, token);
+      await _repository.syncTicketsOffline(concertId);
       _isSyncing = false;
       notifyListeners();
       return true;

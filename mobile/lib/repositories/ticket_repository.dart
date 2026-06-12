@@ -7,18 +7,18 @@ class TicketRepository {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   // Đồng bộ vé offline (tải vé của concert xuống local)
-  Future<void> syncTicketsOffline(String concertId, String token) async {
-    // 1. Gọi API lấy vé của concert
+  Future<void> syncTicketsOffline(String concertId) async {
+    //Gọi API lấy vé của concert
     final tickets = await _apiService.fetchTickets(concertId);
     
-    // 2. Xóa vé cũ (vì chỉ làm việc với 1 concert)
+    // Xóa vé cũ (vì chỉ làm việc với 1 concert)
     await _dbHelper.clearAllTickets();
     
-    // 3. Lưu vé mới vào database
+    // Lưu vé mới vào database
     await _dbHelper.saveTickets(tickets);
   }
 
-  // Tìm vé bằng QR code (dùng khi quét)
+  // Tìm vé bằng QR code
   Future<TicketModel?> getTicketByQr(String qrCode) async {
     return await _dbHelper.getTicketByQr(qrCode);
   }

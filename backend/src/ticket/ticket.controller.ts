@@ -2,9 +2,16 @@ import { Controller, Get, Post, Body, Req, UseGuards, Param, BadRequestException
 import { TicketService } from './ticket.service';
 import { JwtAuthGuard } from '../common/guards/jwt.strategy';
 
+
 @Controller('tickets')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
+
+
+  @Get('/sync/:concertId')
+  findTicketsByConcert(@Param('concertId') id: string) {
+    return this.ticketService.findTicketByConcertId(id);
+  }
 
   /**
    * Lấy danh sách vé đã mua thành công của user hiện tại.

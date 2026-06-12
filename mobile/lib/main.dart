@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/dio_client.dart';  // 👈 THÊM IMPORT
+import 'services/dio_client.dart';
 import 'providers/auth_provider.dart';
 import 'providers/concert_provider.dart';
 import 'providers/ticket_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/concert_selection_screen.dart';
+//import '../services/database_helper.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 👈 KHỞI TẠO DioClient TRƯỚC KHI DÙNG
   DioClient().init();
+  //đoạn code này dùng để xóa bảng data (nếu cần thì bỏ comment rồi chạy 1 lận)
+  //await DatabaseHelper().resetDatabase();
 
   runApp(
     MultiProvider(
