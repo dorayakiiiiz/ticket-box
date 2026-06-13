@@ -4,25 +4,17 @@ import '../providers/auth_provider.dart';
 import 'concert_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  //StatefulWidget: trạng thái có thể thay đổi
   const LoginScreen({super.key});
 
-  //Bắt buộc có trong StatefulWidget
-  //Dùng để lưu trạng thái của widget
   @override
-  State<LoginScreen> createState() {
-    return _LoginScreenState(); //Trả về 1 đối tượng _LoginScreenState
-  }
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  //Khai báo các state
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
 
-  //Dùng để giải phóng bộ nhớ
-  //Chạy khi màn hình này bị hủy
   @override
   void dispose() {
     _emailController.dispose();
@@ -30,61 +22,64 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /*
-  //Xử lí đăng nhập
+  // Xử lý đăng nhập
   void _handleLogin() async {
     // Lấy email và password
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    
-    // Validate cơ bản
 
-    if (email.isEmpty || password.isEmpty) {
+    // Validate cơ bản
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Vui lòng nhập email và mật khẩu'),
+          content: Text('Vui lòng nhập email'),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
         ),
       );
       return;
     }
 
+    if (password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng nhập mật khẩu'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
-    
     // Lấy authProvider
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     // Gọi login qua provider
     final success = await authProvider.login(email, password);
-    
-    if (success && mounted) {
+
+    if (!mounted) return;
+
+    if (success) {
       // Đăng nhập thành công
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const ConcertSelectionScreen()),
       );
-    } else if (mounted) {
+    } else {
       // Hiển thị lỗi
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.errorMessage ?? 'Đăng nhập thất bại'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
-
-
-
-    //pushReplacement dùng để thay thế màn hình hiện tại và không thể quay lại
-    //Tạm thời dùng "push" (có thể quay lại) để chạy test
   }
 
-   */
-
-  //Vẽ widget
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -148,6 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: const TextStyle(color: Colors.black87),
                           keyboardType: TextInputType.emailAddress,
                           cursorColor: Colors.black,
+                          enabled: !authProvider.isLoading, // Disable khi đang loading
                           decoration: InputDecoration(
                             prefixIcon: const Icon(
                               Icons.email_outlined,
@@ -184,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password field - Label phía trên cố định
+                    // Password field
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -202,6 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: const TextStyle(color: Colors.black87),
                           obscureText: !_isPasswordVisible,
                           cursorColor: Colors.black,
+                          enabled: !authProvider.isLoading, // Disable khi đang loading
                           decoration: InputDecoration(
                             prefixIcon: const Icon(
                               Icons.lock_outline,
@@ -216,7 +213,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: Colors.grey,
                                 size: 20,
                               ),
-                              onPressed: () {
+                              onPressed: authProvider.isLoading
+                                  ? null
+                                  : () {
                                 setState(() {
                                   _isPasswordVisible = !_isPasswordVisible;
                                 });
@@ -264,31 +263,25 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           elevation: 0,
                         ),
-                        // TODO : bỏ comment để xử li đăng nhập, tạm thời không xử lí để test bên trong
-                        // authProvider.isLoading ? null : _handleLogin,
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ConcertSelectionScreen()),
-                          );
-                        },
+                        onPressed: authProvider.isLoading ? null : _handleLogin,
                         child: authProvider.isLoading
                             ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                             : const Text(
-                                'Đăng nhập',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: 1,
-                                ),
-                              ),
+                          'Đăng nhập',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 48),
@@ -330,7 +323,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-          
+
           // Loading overlay
           if (authProvider.isLoading)
             Container(

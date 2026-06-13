@@ -14,8 +14,8 @@ class DioClient {
   void init() {
     // Public Dio
     _publicDio = Dio(BaseOptions(
-      baseUrl: 'http://10.0.2.2:8080',
-      //baseUrl: 'https://ticket-box-9rzn.onrender.com',
+      //baseUrl: 'http://10.0.2.2:8080',
+      baseUrl: 'https://ticket-box-9rzn.onrender.com',
       connectTimeout: const Duration(seconds: 20),
       receiveTimeout: const Duration(seconds: 20),
       headers: {'Content-Type': 'application/json'},
@@ -23,8 +23,8 @@ class DioClient {
 
     // Private Dio
     _privateDio = Dio(BaseOptions(
-      baseUrl: 'http://10.0.2.2:8080',
-      //baseUrl: 'https://ticket-box-9rzn.onrender.com',
+      //baseUrl: 'http://10.0.2.2:8080',
+      baseUrl: 'https://ticket-box-9rzn.onrender.com',
       connectTimeout: const Duration(seconds: 20),
       receiveTimeout: const Duration(seconds: 20),
       headers: {'Content-Type': 'application/json'},
@@ -48,7 +48,6 @@ class DioClient {
 
   // Set token cho private Dio
   void setAuthToken(String token) {
-    token = 'tester';
     _privateDio.options.headers['Authorization'] = 'Bearer $token';
   }
 

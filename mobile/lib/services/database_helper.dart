@@ -35,8 +35,7 @@ class DatabaseHelper {
       CREATE TABLE users(
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL,
-        name TEXT NOT NULL,
-        token TEXT NOT NULL,
+        fullName TEXT NOT NULL,
         role TEXT DEFAULT 'STAFF'
       )
     ''');
@@ -198,13 +197,24 @@ class DatabaseHelper {
     );
   }
 
-  // Lấy danh sách vé chưa đồng bộ 
+  // Lấy danh sách vé chưa đồng bộ
   Future<List<TicketModel>> getUnsyncedTickets() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'tickets',
       where: 'status = ? AND synced = ?',
       whereArgs: ['CHECKED_IN', 0],
+    );
+    return maps.map((map) => TicketModel.fromMap(map)).toList();
+  }
+
+  Future<List<TicketModel>> getSyncedTickets() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'tickets',
+      where: 'synced = ?',
+      whereArgs: [1],
+      orderBy: 'checkedInAt DESC',
     );
     return maps.map((map) => TicketModel.fromMap(map)).toList();
   }

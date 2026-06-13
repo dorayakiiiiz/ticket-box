@@ -18,7 +18,7 @@ class ConcertProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   
   // Lấy danh sách concerts (cache + API)
-  Future<void> loadConcerts(String token, {bool refresh = false}) async {
+  Future<void> loadConcerts({bool refresh = false}) async {
     if (refresh) {
       _isRefreshing = true;
     } else {

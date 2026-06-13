@@ -1,16 +1,14 @@
 class UserModel {
   final String id;
   final String email;
-  final String name;
-  final String token;
+  final String fullName;
   final String role;
 
   //Dùng required để bắt buộc phải có các tham số lúc khởi tạo
   UserModel({
     required this.id,
     required this.email,
-    required this.name,
-    required this.token,
+    required this.fullName,
     this.role = 'STAFF',
   });
 
@@ -18,8 +16,7 @@ class UserModel {
     return UserModel(
       id: json['id'],
       email: json['email'],
-      name: json['name'],
-      token: json['token'],
+      fullName: json['fullName'],
       role: json['role'] ?? 'STAFF',
     );
   }
@@ -28,8 +25,7 @@ class UserModel {
     return {
       'id': id,
       'email': email,
-      'name': name,
-      'token': token,
+      'fullName': fullName,
       'role': role,
     };
   }
@@ -40,8 +36,7 @@ class UserModel {
     return UserModel(
       id: map['id'],
       email: map['email'],
-      name: map['name'],
-      token: map['token'],
+      fullName: map['fullName'],
       role: map['role'] ?? 'STAFF',
     );
   }

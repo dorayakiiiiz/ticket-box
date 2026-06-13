@@ -23,7 +23,7 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final concertProvider = Provider.of<ConcertProvider>(context, listen: false);
 
-    await concertProvider.loadConcerts("abcd");
+    await concertProvider.loadConcerts(refresh: false);
 
     /*
     if (authProvider.currentUser != null) {
@@ -70,7 +70,7 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
     final concertProvider = Provider.of<ConcertProvider>(context, listen: false);
 
     if (authProvider.currentUser != null) {
-      await concertProvider.loadConcerts(authProvider.currentUser!.token, refresh: true);
+      await concertProvider.loadConcerts(refresh: true);
     }
   }
 
