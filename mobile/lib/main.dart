@@ -6,6 +6,7 @@ import 'providers/concert_provider.dart';
 import 'providers/ticket_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/concert_selection_screen.dart';
+import 'utils/network_sync_service.dart';
 //import '../services/database_helper.dart';
 
 
@@ -14,6 +15,10 @@ void main() async {
   DioClient().init();
   //đoạn code này dùng để xóa bảng data (nếu cần thì bỏ comment rồi chạy 1 lận)
   //await DatabaseHelper().resetDatabase();
+
+  //khởi tạo background sync
+  final syncService = NetworkSyncService();
+  syncService.startBackgroundSync();
 
   runApp(
     MultiProvider(

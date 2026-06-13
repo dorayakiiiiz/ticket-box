@@ -91,10 +91,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     // Cập nhật thống kê nếu thành công
     if (result['success']) {
-      setState(() {
-        _totalScanned++;
-        _totalUnsynced++;
-      });
+      // Load lại stats ngay sau khi quét thành công
+      await _loadStats();
     }
 
     // Hiển thị kết quả
@@ -305,36 +303,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Nút bắt đầu quét
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _isScanning ? null : () {
-                      setState(() {
-                        _isScanning = true;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4CAF50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      _isScanning ? 'ĐANG QUÉT...' : 'BẮT ĐẦU QUÉT',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-
                 Row(
                   children: [
                     Expanded(

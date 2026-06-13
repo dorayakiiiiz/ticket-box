@@ -7,28 +7,20 @@ class ConcertApiService {
   factory ConcertApiService() => _instance;
   ConcertApiService._internal();
 
-  // Dùng private Dio từ DioClient
   final Dio _dio = DioClient().private;
 
   // Lấy danh sách concert
   Future<List<ConcertModel>> fetchConcerts() async {
     try {
-      print('📡 [ConcertApiService] Gọi API: GET /concerts');
-      print('🔑 Token hiện tại: ${_dio.options.headers['Authorization']}');
 
+      print('[ConcertApiService] Gọi API: GET /concerts');
       final response = await _dio.get('/concerts');
-
-      print('✅ [ConcertApiService] Response status: ${response.statusCode}');
-      print('📦 [ConcertApiService] Số lượng concert nhận được: ${(response.data as List).length}');
+      print('[ConcertApiService] Response status: ${response.statusCode}');
 
       final List<dynamic> data = response.data;
       return data.map((json) => ConcertModel.fromJson(json)).toList();
     } catch (e) {
-      print('❌ [ConcertApiService] Lỗi: $e');
-      if (e is DioException) {
-        print('📡 [ConcertApiService] Status code: ${e.response?.statusCode}');
-        print('📝 [ConcertApiService] Response data: ${e.response?.data}');
-      }
+      print('[ConcertApiService] Lỗi: $e');
       throw Exception('Không thể tải danh sách sự kiện: $e');
     }
   }

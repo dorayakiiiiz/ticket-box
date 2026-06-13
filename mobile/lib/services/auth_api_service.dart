@@ -6,13 +6,13 @@ class AuthApiService {
   factory AuthApiService() => _instance;
   AuthApiService._internal();
 
-  // Dùng public Dio từ DioClient (không cần token)
-  final Dio _dio = DioClient().public;
+  final Dio publicDio = DioClient().public;
+  final Dio privateDio = DioClient().private;
 
   // Đăng nhập
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      final response = await _dio.post('/auth/login', data: {
+      final response = await publicDio.post('/auth/login', data: {
         'email': email,
         'password': password,
       });
@@ -30,8 +30,6 @@ class AuthApiService {
 
   Future<void> logout(String token) async {
     try {
-      final privateDio = DioClient().private;
-      privateDio.options.headers['Authorization'] = 'Bearer $token';
       await privateDio.post('/auth/logout');
     } catch (e) {
       print('Logout API error: $e');

@@ -156,7 +156,14 @@ class DatabaseHelper {
     await batch.commit(noResult: true);
   }
 
-  // Xóa tất cả vé 
+
+  // Xóa tất cả các concert hiện có trong cache
+  Future<void> clearAllConcerts() async {
+    final db = await database;
+    await db.delete('concerts');
+  }
+
+  // Xóa tất cả vé hiện có trong cache
   Future<void> clearAllTickets() async {
     final db = await database;
     await db.delete('tickets');
@@ -290,7 +297,7 @@ class DatabaseHelper {
     await batch.commit(noResult: true);
   }
 
-  // ============ STATISTICS & HISTORY METHODS ============
+  // ============ HISTORY METHODS ============
 
   // Đếm tổng số vé của concert hiện tại
   Future<int> getTotalTickets() async {
@@ -300,7 +307,7 @@ class DatabaseHelper {
   }
 
   // Đếm số vé đã quét hôm nay
-  // Đếm tổng số vé đã quét (tất cả)
+  // Đếm tổng số vé đã quét
   Future<int> getScannedCount() async {
     final db = await database;
     final result = await db.rawQuery(
@@ -324,7 +331,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getScannedHistory() async {
     final db = await database;
     return await db.rawQuery(
-        'SELECT id, qrCode, status, checkedInAt, synced FROM tickets WHERE status = ? ORDER BY checkedInAt DESC',
+        'SELECT id, holderName, qrCode, status, checkedInAt, synced FROM tickets WHERE status = ? ORDER BY checkedInAt DESC',
         ['CHECKED_IN']
     );
   }

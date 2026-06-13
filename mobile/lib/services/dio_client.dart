@@ -15,16 +15,18 @@ class DioClient {
     // Public Dio
     _publicDio = Dio(BaseOptions(
       baseUrl: 'http://10.0.2.2:8080',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      //baseUrl: 'https://ticket-box-9rzn.onrender.com',
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 20),
       headers: {'Content-Type': 'application/json'},
     ));
 
     // Private Dio
     _privateDio = Dio(BaseOptions(
       baseUrl: 'http://10.0.2.2:8080',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
+      //baseUrl: 'https://ticket-box-9rzn.onrender.com',
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 20),
       headers: {'Content-Type': 'application/json'},
     ));
 
@@ -50,7 +52,7 @@ class DioClient {
     _privateDio.options.headers['Authorization'] = 'Bearer $token';
   }
 
-  // Xóa token (khi logout)
+  // Xóa token
   void clearAuthToken() {
     _privateDio.options.headers.remove('Authorization');
   }

@@ -10,13 +10,13 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
   UserModel? _currentUser;
   
-  // Getters
+  // Getters (nơi UI nhìn vào để biết sẽ phải hiển thị những gì)
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   UserModel? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
   
-  // Khởi tạo: kiểm tra đã đăng nhập chưa
+  //kiểm tra đã đăng nhập chưa
   Future<void> init() async {
     _currentUser = await _repository.getCurrentUser();
     notifyListeners();

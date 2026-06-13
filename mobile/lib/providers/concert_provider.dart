@@ -28,12 +28,8 @@ class ConcertProvider extends ChangeNotifier {
     notifyListeners();
     
     try {
-      if (refresh) {
-        _concerts = await _repository.refreshConcerts();
-      } else {
-        _concerts = await _repository.getConcerts();
-      }
-      
+
+      _concerts = await _repository.getConcerts();
       _isLoading = false;
       _isRefreshing = false;
       notifyListeners();

@@ -11,7 +11,7 @@ class TicketRepository {
     //Gọi API lấy vé của concert
     final tickets = await _apiService.fetchTickets(concertId);
     
-    // Xóa vé cũ (vì chỉ làm việc với 1 concert)
+    // Xóa vé cũ
     await _dbHelper.clearAllTickets();
     
     // Lưu vé mới vào database
@@ -28,23 +28,21 @@ class TicketRepository {
     await _dbHelper.updateTicketStatus(qrCode, DateTime.now());
   }
 
-  // Đồng bộ các vé đã check-in lên server (background sync)
-  Future<void> syncPendingCheckins(String token) async {
-    // 1. Lấy danh sách vé chưa sync
+  Future<void> syncPendingCheckins() async {
+    // Lấy vé chưa sync
     final unsyncedTickets = await _dbHelper.getUnsyncedTickets();
-    
-    if (unsyncedTickets.isEmpty) return;
-    
-    // 2. Chuyển sang định dạng API
-    final checkins = unsyncedTickets.map((ticket) => {
-      'qrPayload': ticket.qrCode,
-      'timestamp': ticket.checkedInAt,
-    }).toList();
-    
-    // 3. Gửi lên server
+
+    //if (unsyncedTickets.isEmpty) return;
+
+    // Chuẩn bị dữ liệu
+    final checkins = unsyncedTickets.map((ticket) => ({
+      'id': ticket.id,
+      'timestamp': ticket.checkedInAt
+    })).toList();
+
     await _apiService.syncCheckins(checkins);
-    
-    // 4. Đánh dấu đã sync
+
+    // Đánh dấu đã sync
     final ticketIds = unsyncedTickets.map((t) => t.id).toList();
     await _dbHelper.markTicketsAsSynced(ticketIds);
   }

@@ -24,7 +24,9 @@ class SyncApiService {
   // Gửi danh sách vé đã check-in lên server
   Future<void> syncCheckins(List<Map<String, dynamic>> checkins) async {
     try {
-      await _dio.post('/sync/checkins', data: {'checkins': checkins});
+      await _dio.post('/tickets/sync/checkins', data: {
+        'checkins': checkins,
+      });
     } catch (e) {
       throw Exception('Không thể đồng bộ kết quả check-in: $e');
     }

@@ -38,7 +38,7 @@ class TicketProvider extends ChangeNotifier {
     }
   }
   
-  // Xác thực vé (khi quét QR)
+  // Xác thực vé
   Future<Map<String, dynamic>> validateTicket(String qrCode) async {
     _isValidating = true;
     _validationMessage = null;
@@ -46,31 +46,31 @@ class TicketProvider extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // 1. Tìm vé trong database
+      // Tìm vé trong database
       final ticket = await _repository.getTicketByQr(qrCode);
       
       if (ticket == null) {
         _isValidating = false;
-        _validationMessage = '❌ Mã vé không tồn tại';
+        _validationMessage = 'Mã vé không tồn tại';
         _validationSuccess = false;
         notifyListeners();
         return {'success': false, 'message': 'Mã vé không tồn tại'};
       }
       
-      // 2. Kiểm tra trạng thái
+      // Kiểm tra trạng thái
       if (ticket.status == 'CHECKED_IN') {
         _isValidating = false;
-        _validationMessage = '❌ Vé đã được sử dụng';
+        _validationMessage = 'Vé đã được sử dụng';
         _validationSuccess = false;
         notifyListeners();
         return {'success': false, 'message': 'Vé đã được sử dụng'};
       }
       
-      // 3. Hợp lệ → đánh dấu đã check-in
+      // Hợp lệ thì đánh dấu đã check-in
       await _repository.markTicketAsCheckedIn(qrCode);
       
       _isValidating = false;
-      _validationMessage = '✅ VÉ HỢP LỆ!';
+      _validationMessage = 'VÉ HỢP LỆ!';
       _validationSuccess = true;
       notifyListeners();
       
@@ -78,16 +78,11 @@ class TicketProvider extends ChangeNotifier {
       
     } catch (e) {
       _isValidating = false;
-      _validationMessage = '❌ Lỗi: $e';
+      _validationMessage = 'Lỗi: $e';
       _validationSuccess = false;
       notifyListeners();
       return {'success': false, 'message': 'Lỗi: $e'};
     }
-  }
-  
-  // Đồng bộ kết quả check-in lên server (background)
-  Future<void> syncPendingCheckins(String token) async {
-    await _repository.syncPendingCheckins(token);
   }
   
   // Xóa message sau khi hiển thị

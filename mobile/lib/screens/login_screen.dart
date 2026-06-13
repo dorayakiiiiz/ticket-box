@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // Thêm import provider
-import '../providers/auth_provider.dart'; // Thêm import auth_provider
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import 'concert_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -264,7 +264,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           elevation: 0,
                         ),
-                        //onPressed: authProvider.isLoading ? null : _handleLogin,
+                        // TODO : bỏ comment để xử li đăng nhập, tạm thời không xử lí để test bên trong
+                        // authProvider.isLoading ? null : _handleLogin,
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const ConcertSelectionScreen()),
