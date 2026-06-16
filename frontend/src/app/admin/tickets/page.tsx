@@ -25,15 +25,15 @@ export default function AdminTicketsPage() {
 
       {/* Stats — Figma exact: 3-col */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white border border-gray-200 rounded-sm p-6">
+        <div className="bg-white border border-gray-200 p-6">
           <p className="text-sm font-medium text-gray-600 mb-2">Tổng vé</p>
           <p style={D} className="text-3xl font-black text-gray-900">{TICKETS.length}</p>
         </div>
-        <div className="bg-white border border-gray-200 rounded-sm p-6">
+        <div className="bg-white border border-gray-200 p-6">
           <p className="text-sm font-medium text-gray-600 mb-2">Đã check-in</p>
           <p style={D} className="text-3xl font-black text-green-600">{TICKETS.filter(t => t.status === 'CHECKED_IN').length}</p>
         </div>
-        <div className="bg-white border border-gray-200 rounded-sm p-6">
+        <div className="bg-white border border-gray-200 p-6">
           <p className="text-sm font-medium text-gray-600 mb-2">Chưa sử dụng</p>
           <p style={D} className="text-3xl font-black text-gray-900">{TICKETS.filter(t => t.status === 'UNUSED').length}</p>
         </div>
@@ -43,7 +43,7 @@ export default function AdminTicketsPage() {
       <div className="flex gap-2 mb-6">
         {['ALL', 'UNUSED', 'CHECKED_IN'].map(status => (
           <button key={status} onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 text-sm font-bold rounded-sm transition-colors ${
+            className={`px-4 py-2 text-sm font-bold transition-colors ${
               statusFilter === status
                 ? 'bg-gray-900 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -54,7 +54,7 @@ export default function AdminTicketsPage() {
       </div>
 
       {/* Tickets Table — Figma exact */}
-      <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
+      <div className="bg-white border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -79,7 +79,7 @@ export default function AdminTicketsPage() {
                   <td className="px-6 py-4 text-sm text-gray-600">{ticket.holder}</td>
                   <td className="px-6 py-4 text-sm font-mono text-gray-900">{ticket.qrCode}</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-block text-xs font-bold px-2 py-1 rounded-sm ${
+                    <span className={`inline-block text-xs font-bold px-2 py-1 ${
                       ticket.status === 'CHECKED_IN' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                     }`}>
                       {ticket.status === 'CHECKED_IN' ? 'Đã check-in' : 'Chưa dùng'}

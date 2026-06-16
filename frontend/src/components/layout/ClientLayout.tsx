@@ -16,7 +16,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <>
       {!hideNav && <Navbar />}
-      <main className={!hideNav ? "flex-1 pt-14" : "flex-1"}>
+      <main suppressHydrationWarning className={!hideNav ? "flex-1 pt-14" : "flex-1"}>
         {children}
       </main>
       {!hideFooter && <Footer />}

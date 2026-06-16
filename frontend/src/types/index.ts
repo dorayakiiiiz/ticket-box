@@ -95,3 +95,15 @@ export type BookingStatusResponse = {
   status: 'processing' | 'completed' | 'failed';
   orderId: string | null;
 };
+
+// ─── Ticket Type CRUD Payloads ───────────────────────────────────────────────
+
+export type CreateTicketTypePayload = {
+  name: string;
+  price: number;
+  totalQuantity: number;
+  maxPerUser: number;
+  colorCode: string;
+};
+
+export type UpdateTicketTypePayload = Partial<CreateTicketTypePayload>;

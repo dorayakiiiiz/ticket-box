@@ -68,7 +68,7 @@ export default function AdminConcertsPage() {
           <h1 style={D} className="text-4xl font-black uppercase italic text-gray-900 mb-2">Quản lý Concert</h1>
           <p className="text-gray-600">Tạo và quản lý các sự kiện</p>
         </div>
-        <button onClick={openCreate} className="bg-gray-900 text-white font-bold text-sm px-6 py-3 rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2">
+        <button onClick={openCreate} className="bg-gray-900 text-white font-bold text-sm px-6 py-3 hover:bg-gray-800 transition-colors flex items-center gap-2">
           <Plus size={16} /> Thêm concert
         </button>
       </div>
@@ -82,10 +82,10 @@ export default function AdminConcertsPage() {
             placeholder="Tìm kiếm concert..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-sm text-sm focus:outline-none focus:border-gray-400"
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 text-sm focus:outline-none focus:border-gray-400"
           />
         </div>
-        <button className="px-4 py-3 bg-white border border-gray-200 rounded-sm hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-semibold text-gray-700">
+        <button className="px-4 py-3 bg-white border border-gray-200 hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm font-semibold text-gray-700">
           <Filter size={16} /> Lọc
         </button>
       </div>
@@ -97,7 +97,7 @@ export default function AdminConcertsPage() {
 
       {/* Error */}
       {!isLoading && error && (
-        <div className="bg-white border border-red-200 rounded-sm px-6 py-10 text-center">
+        <div className="bg-white border border-red-200 px-6 py-10 text-center">
           <p className="text-red-600 text-sm font-medium mb-2">{error}</p>
           <button onClick={fetchConcerts} className="text-sm text-blue-600 hover:underline">Thử lại</button>
         </div>
@@ -111,7 +111,7 @@ export default function AdminConcertsPage() {
               ? Math.round(event.ticketTypes.reduce((s, t) => s + t.soldQuantity, 0) / event.ticketTypes.reduce((s, t) => s + t.totalQuantity, 0) * 100)
               : 0;
             return (
-              <div key={event.id} className="bg-white border border-gray-200 rounded-sm overflow-hidden hover:border-gray-300 transition-colors cursor-pointer" onClick={() => openView(event)}>
+              <div key={event.id} className="bg-white border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors cursor-pointer" onClick={() => openView(event)}>
                 <div className="relative h-40">
                   {event.coverImageUrl ? (
                     <img src={event.coverImageUrl} alt={event.name} className="w-full h-full object-cover" />
@@ -131,10 +131,10 @@ export default function AdminConcertsPage() {
                     <div className="h-full bg-[#CCFF00]" style={{ width: `${sold}%` }} />
                   </div>
                   <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => openEdit(event)} className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-1">
+                    <button onClick={() => openEdit(event)} className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-1">
                       <Edit size={12} /> Sửa
                     </button>
-                    <button onClick={() => setDeletingConcert(event)} className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-sm hover:bg-red-100 transition-colors flex items-center justify-center gap-1">
+                    <button onClick={() => setDeletingConcert(event)} className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1">
                       <Trash2 size={12} /> Xóa
                     </button>
                   </div>
@@ -147,9 +147,9 @@ export default function AdminConcertsPage() {
 
       {/* Empty */}
       {!isLoading && !error && concerts.length === 0 && (
-        <div className="bg-white border border-gray-200 rounded-sm px-6 py-16 text-center">
+        <div className="bg-white border border-gray-200 px-6 py-16 text-center">
           <p className="text-sm text-gray-500 mb-4">Chưa có concert nào</p>
-          <button onClick={openCreate} className="bg-gray-900 text-white font-bold text-sm px-6 py-3 rounded-sm hover:bg-gray-800 transition-colors">
+          <button onClick={openCreate} className="bg-gray-900 text-white font-bold text-sm px-6 py-3 hover:bg-gray-800 transition-colors">
             <Plus size={16} className="inline mr-1" /> Tạo concert mới
           </button>
         </div>
@@ -170,7 +170,7 @@ export default function AdminConcertsPage() {
       {deletingConcert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !isDeleting && setDeletingConcert(null)} />
-          <div className="relative bg-white rounded-sm w-full max-w-sm">
+          <div className="relative bg-white w-full max-w-sm">
             <div className="p-6 border-b border-gray-200 flex items-center justify-between">
               <h2 style={D} className="text-xl font-black uppercase italic text-gray-900">Xóa Concert</h2>
               <button onClick={() => setDeletingConcert(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
@@ -181,11 +181,11 @@ export default function AdminConcertsPage() {
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setDeletingConcert(null)} disabled={isDeleting}
-                  className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 font-semibold rounded-sm hover:bg-gray-50 transition-colors">
+                  className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
                   Hủy
                 </button>
                 <button onClick={handleDelete} disabled={isDeleting}
-                  className="flex-1 px-6 py-3 bg-red-600 text-white font-bold rounded-sm hover:bg-red-700 transition-colors disabled:opacity-50">
+                  className="flex-1 px-6 py-3 bg-red-600 text-white font-bold hover:bg-red-700 transition-colors disabled:opacity-50">
                   {isDeleting ? 'Đang xóa...' : 'Xóa'}
                 </button>
               </div>

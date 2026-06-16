@@ -36,7 +36,7 @@ export default function AdminOrdersPage() {
       <div className="flex gap-2 mb-6">
         {['ALL', 'PAID', 'PENDING', 'CANCELLED'].map(status => (
           <button key={status} onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 text-sm font-bold rounded-sm transition-colors ${
+            className={`px-4 py-2 text-sm font-bold transition-colors ${
               statusFilter === status
                 ? 'bg-gray-900 text-white'
                 : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -47,7 +47,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Orders Table — Figma exact */}
-      <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
+      <div className="bg-white border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -74,7 +74,7 @@ export default function AdminOrdersPage() {
                   <td className="px-6 py-4 text-sm text-gray-900">{order.qty}</td>
                   <td className="px-6 py-4 text-sm font-bold text-gray-900">{fmt(order.total)}đ</td>
                   <td className="px-6 py-4">
-                    <span className={`inline-block text-xs font-bold px-2 py-1 rounded-sm ${BADGE[order.status] ?? ''}`}>
+                    <span className={`inline-block text-xs font-bold px-2 py-1 ${BADGE[order.status] ?? ''}`}>
                       {order.status}
                     </span>
                   </td>
