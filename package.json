@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "@nestjs-modules/ioredis": "^2.2.1",
+    "@nestjs/bullmq": "^11.0.4",
+    "@nestjs/common": "^11.1.26",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.1.26",
+    "@nestjs/platform-express": "^11.1.26",
+    "@nestjs/typeorm": "^11.0.1",
+    "bullmq": "^5.78.0",
+    "ioredis": "^5.11.1",
+    "nestjs-pino": "^4.6.1",
+    "pino-http": "^11.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.1.0"
+  }
+}

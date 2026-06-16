@@ -8,3 +8,14 @@ tasks/
 
 # docs của t
 /explain-docs
+
+#flutter
+node_modules/
+.env
+.DS_Store
+.idea/
+.vscode/
+mobile/build/
+backend/dist/
+frontend/dist/
+*.log
