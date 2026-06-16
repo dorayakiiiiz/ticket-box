@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Order, OrderStatus } from '../entities/order.entity';
-import { Ticket } from '../entities/ticket.entity';
+import { Ticket, TicketStatus } from '../entities/ticket.entity';
+import { Concert } from '../entities/concert.entity';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class TicketService {
@@ -11,7 +14,52 @@ export class TicketService {
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(Ticket)
     private readonly ticketRepo: Repository<Ticket>,
+    @InjectRepository(Concert) private readonly concertRepo: Repository<Concert>,
+    private readonly dataSource: DataSource,
+    @InjectQueue('ticketbox.sync-checkins')  
+    private readonly syncQueue: Queue,
   ) {}
+
+  /**
+   * Lấy danh sách vé của một concert cụ thể 
+   */
+
+  async findTicketByConcertId(id: string) {
+    
+    const concert = await this.concertRepo.findOne({ where: { id } });
+    if (!concert) throw new NotFoundException('Concert không tồn tại');
+    
+    const tickets = await this.ticketRepo
+      .createQueryBuilder('ticket')
+      .innerJoinAndSelect('ticket.ticketType', 'ticketType')
+      .innerJoin('ticketType.concert', 'concert')
+      .where('concert.id = :id', { id })
+      .getMany();
+    
+    return tickets.map(ticket => ({
+      id: ticket.id,
+      holderName: ticket.holderName,     
+      qrPayload: ticket.qrCode,          
+      status: ticket.status,
+    }));
+  }
+
+
+  async syncCheckins(
+    checkins: Array<{ id: string; timestamp: string }>,
+  ) {
+    // Thêm job vào queue
+    const job = await this.syncQueue.add('process-checkins', {
+      checkins
+    });
+
+    return {
+      status: 'SUCCESS',
+      message: 'Đang đồng bộ với hệ thống',   
+      jobId: job.id,
+      total: checkins.length,
+    };
+  }
 
   /**
    * Lấy danh sách vé đã mua của một user, gom nhóm theo Order (đơn hàng).
