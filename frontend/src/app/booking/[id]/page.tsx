@@ -110,12 +110,6 @@ export default function SeatMapPage() {
 
       const status = err.response?.status;
       const msg = err.response?.data?.message;
-      // if (status === 429) setErrorMsg('Bạn thao tác quá nhanh, vui lòng thử lại.');
-      // else if (status === 409) setErrorMsg('Yêu cầu đang xử lý, không bấm lại.');
-      // else if (status === 400) setErrorMsg(msg || 'Hết vé hoặc vượt giới hạn.');
-      // else if (status === 401) setErrorMsg('Vui lòng đăng nhập để đặt vé.');
-      // else if (status === 403) setErrorMsg(msg || 'Bị từ chối truy cập (Lỗi Captcha).');
-      // else setErrorMsg('Đã xảy ra lỗi. Vui lòng thử lại sau.');
       if (!err.response) {
         setErrorMsg(`Lỗi Mạng/CORS: Không thể kết nối đến máy chủ. Chi tiết: ${err.message}`);
       } else if (status === 429) {
