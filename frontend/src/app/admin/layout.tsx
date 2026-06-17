@@ -33,9 +33,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   /* text-gray-900: override body's text-white so inputs/selects/textareas are visible on white bg */
   return (
-    <div className="min-h-screen flex bg-gray-50 text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="h-screen flex overflow-hidden bg-gray-50 text-gray-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <AdminSidebar />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-y-auto">
         {children}
       </main>
     </div>

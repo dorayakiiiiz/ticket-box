@@ -336,7 +336,7 @@ export default function SeatMapPage() {
               {/* Đặt vé và tạo Order */}
               <button
                 onClick={handleBooking}
-                disabled={bookingState === 'submitting' || bookingState === 'polling'}
+                disabled={!captchaToken || bookingState === 'submitting' || bookingState === 'polling'}
                 className="w-full bg-[#CCFF00] text-black font-black uppercase tracking-[0.12em] text-sm py-3 hover:bg-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
                 {bookingState === 'submitting' || bookingState === 'polling' ? (
                   <><Loader2 size={16} className="animate-spin" /> Đang xử lý...</>

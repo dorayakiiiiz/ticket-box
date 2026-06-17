@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Clock, ChevronLeft, AlertCircle, X, Loader2, AlertTriangle } from 'lucide-react';
 import { concertService } from '@/services/concertService';
 import { paymentService } from '@/services/paymentService';
+import { useAuthStore } from '@/stores/authStore';
 import type { Concert, TicketType } from '@/types';
 import { fmt } from '@/utils/format';
 
@@ -16,13 +17,15 @@ export default function CheckoutPage() {
   const qty = Number(searchParams.get('qty') || 1);
   const orderId = searchParams.get('orderId');
 
+  const { user } = useAuthStore();
+
   const [concert, setConcert] = useState<Concert | null>(null);
   const [ticketType, setTicketType] = useState<TicketType | null>(null);
   const [secs, setSecs] = useState(15 * 60);
   const [pay, setPay] = useState<"momo" | "vnpay" | "card">("vnpay");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [name, setName] = useState(user?.fullName || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [phone, setPhone] = useState(user?.phone || "");
   const [agreed, setAgreed] = useState(false);
   
   const [paymentState, setPaymentState] = useState<'idle' | 'processing'>('idle');
@@ -49,6 +52,14 @@ export default function CheckoutPage() {
     const timerId = setInterval(() => setSecs(s => Math.max(0, s - 1)), 1000);
     return () => clearInterval(timerId);
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      if (!name) setName(user.fullName || "");
+      if (!email) setEmail(user.email || "");
+      if (!phone) setPhone(user.phone || "");
+    }
+  }, [user]);
 
   if (!concert || !ticketType) return <div className="min-h-screen pt-20 text-center text-gray-500">Đang tải...</div>;
 

@@ -166,16 +166,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tên chủ vé: ${item['holderName'] ?? 'Không có tên'}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 6),
                             Text(
                               'Mã QR: ${item['qrCode']}',
                               style: const TextStyle(

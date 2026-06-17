@@ -10,6 +10,8 @@ export interface MyTicketOrder {
     id: string;
     name: string;
     date: string;
+    venue: string;
+    city: string;
   };
   ticketType: {
     name: string;

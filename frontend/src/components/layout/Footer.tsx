@@ -5,9 +5,9 @@ export default function Footer() {
   const D = { fontFamily: "'Barlow Condensed', sans-serif" };
 
   return (
-    <footer className="border-t border-[#222] mt-4 bg-[#050505] text-white">
+    <footer className="border-t border-[#222] bg-[#050505] text-white">
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" style={D} className="inline-flex items-center text-3xl font-black tracking-tight mb-3">
               Ticket
@@ -21,7 +21,6 @@ export default function Footer() {
             </p>
           </div>
           {[
-            { title: "Sự kiện", links: ["Nhạc Pop", "Rap/Hip-Hop", "EDM", "Rock", "Comedy"] },
             { title: "Về chúng tôi", links: ["Giới thiệu", "Đối tác", "Tuyển dụng", "Blog"] },
             { title: "Hỗ trợ", links: ["Câu hỏi thường gặp", "Liên hệ", "Chính sách hoàn tiền", "Điều khoản"] }
           ].map(({ title, links }) => (

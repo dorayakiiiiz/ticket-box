@@ -16,11 +16,10 @@ type FormState = {
   city: string;
   date: string;
   coverImageUrl: string;
-  aiBio: string;
 };
 
 const EMPTY_FORM: FormState = {
-  name: '', subtitle: '', description: '', venue: '', city: '', date: '', coverImageUrl: '', aiBio: '',
+  name: '', subtitle: '', description: '', venue: '', city: '', date: '', coverImageUrl: '',
 };
 
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
@@ -91,7 +90,6 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         city: concert.city,
         date: concert.date ? new Date(concert.date).toISOString().slice(0, 16) : '',
         coverImageUrl: concert.coverImageUrl ?? '',
-        aiBio: concert.aiBio ?? '',
       });
       setTicketTypes(concert.ticketTypes ?? []);
     } else {
@@ -189,7 +187,6 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         city: form.city,
         date: form.date,
         coverImageUrl: form.coverImageUrl || undefined,
-        ...(form.aiBio ? { aiBio: form.aiBio } : {}),
       };
       if (mode === 'edit' && concert) {
         await adminService.updateConcert(concert.id, payload);
@@ -302,15 +299,7 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
               <p className="text-sm text-gray-600 leading-relaxed">{concert.description}</p>
             </div>
 
-            {/* Row 6 — Artist Bio */}
-            {concert.aiBio && (
-              <div>
-                <label className={labelCls}>Artist Bio</label>
-                <div className="bg-gray-50 border border-gray-100 px-4 py-3">
-                  <p className="text-sm text-gray-600 leading-relaxed italic">{concert.aiBio}</p>
-                </div>
-              </div>
-            )}
+
 
             {/* Row 7 — Ticket Types (read-only) */}
             {ticketTypes.length > 0 && (
@@ -386,25 +375,20 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
 
             {/* Row 4 — Description */}
             <div>
-              <label className={labelCls}>Mô tả</label>
-              <textarea value={form.description} onChange={set('description')} rows={4} className={`${inputCls} resize-none`} placeholder="Mô tả chi tiết về concert..." />
+              <label className={labelCls}>Mô tả chi tiết *</label>
+              <textarea value={form.description} onChange={set('description')} rows={6} className={`${inputCls} resize-none`} placeholder="Mô tả chi tiết về sự kiện..." />
+              {mode === 'edit' && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Muốn tóm tắt tài liệu PDF (Press kit/Bio) tự động bằng AI và nối vào mô tả? Vào menu{' '}
+                  <Link href="/admin/ai-bio" className="text-blue-600 hover:underline font-medium">Tạo mô tả bằng AI</Link>.
+                </p>
+              )}
             </div>
 
             {/* Row 5 — Cover URL */}
             <div>
               <label className={labelCls}>URL ảnh</label>
               <input type="url" value={form.coverImageUrl} onChange={set('coverImageUrl')} className={inputCls} placeholder="https://..." />
-            </div>
-
-            {/* Row 6 — Bio */}
-            <div>
-              <label className={labelCls}>Tiểu sử nghệ sĩ (Bio)</label>
-              <textarea value={form.aiBio} onChange={set('aiBio')} rows={3} className={`${inputCls} resize-none`} placeholder="Nhập tiểu sử nghệ sĩ hoặc dùng AI Artist Bio..." />
-              <p className="text-xs text-gray-500 mt-1">
-                Muốn generate AI tự động? Vào menu{' '}
-                <Link href="/admin/ai-bio" className="text-blue-600 hover:underline font-medium">AI Artist Bio</Link>{' '}
-                sau khi tạo concert.
-              </p>
             </div>
 
             {/* Row 7 — Ticket Types (chỉ hiển thị khi edit concert đã tồn tại) */}

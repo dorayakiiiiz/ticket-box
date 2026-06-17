@@ -2,35 +2,37 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, Download } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { concertService } from '@/services/concertService';
-import { EventInfo, ZoneInfo } from '@/types';
+import type { Concert, TicketType } from '@/types';
 import { fmt } from '@/utils/format';
 
 export default function ETicketPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const id = Number(params.id);
-  const zoneId = searchParams.get('zone');
+  const concertId = params.id as string;
+  const ticketTypeId = searchParams.get('zone');
   const qty = Number(searchParams.get('qty') || 1);
-  const holderName = searchParams.get('holderName') || 'Nguyễn Văn A';
 
-  const [event, setEvent] = useState<EventInfo | null>(null);
-  const [zone, setZone] = useState<ZoneInfo | null>(null);
+  const [event, setEvent] = useState<Concert | null>(null);
+  const [zone, setZone] = useState<TicketType | null>(null);
   const [ticketNo] = useState("VT-" + Math.random().toString(36).substring(2, 8).toUpperCase());
 
   useEffect(() => {
-    if (!id || !zoneId) return;
+    if (!concertId || !ticketTypeId) return;
     const fetchEvent = async () => {
-      const [data, zData] = await Promise.all([
-        concertService.getEventById(id),
-        concertService.getZones()
-      ]);
-      if (data) setEvent(data);
-      if (zData) setZone(zData.find(z => z.id === zoneId) || null);
+      try {
+        const data = await concertService.getById(concertId);
+        if (data) {
+          setEvent(data);
+          const tt = data.ticketTypes.find(t => t.id === ticketTypeId);
+          if (tt) setZone(tt);
+        }
+      } catch (e) {}
     };
     fetchEvent();
-  }, [id, zoneId]);
+  }, [concertId, ticketTypeId]);
 
   if (!event || !zone) return <div className="min-h-screen pt-20 text-center text-gray-500">Đang tạo vé...</div>;
 
@@ -48,7 +50,7 @@ export default function ETicketPage() {
       <div className="w-full max-w-[640px]">
         <div className="relative overflow-hidden border border-white/10 bg-[#111]">
           {/* Top accent stripe */}
-          <div className="h-1.5 w-full" style={{ backgroundColor: zone.color }} />
+          <div className="h-1.5 w-full" style={{ backgroundColor: zone.colorCode }} />
 
           {/* Top section */}
           <div className="p-7 pb-5">
@@ -57,18 +59,18 @@ export default function ETicketPage() {
                 <div style={D} className="text-[10px] md:text-xs font-mono tracking-[0.25em] text-gray-500 uppercase mb-1">TicketZ — E-TICKET</div>
                 <h1 style={{ ...D, fontSize: "clamp(28px,4.5vw,52px)" }}
                   className="font-black uppercase italic leading-none text-white">{event.name}</h1>
-                <p className="text-sm md:text-base font-semibold tracking-[0.06em] mt-1.5" style={{ color: zone.color }}>{event.subtitle}</p>
+                <p className="text-sm md:text-base font-semibold tracking-[0.06em] mt-1.5" style={{ color: zone.colorCode }}>{event.subtitle}</p>
               </div>
               <div className="shrink-0 text-right">
                 <div className="text-[9px] md:text-[10px] font-mono text-gray-500 mb-1">VÉ SỐ</div>
-                <div className="font-mono font-bold text-sm md:text-base" style={{ color: zone.color }}>{ticketNo}</div>
+                <div className="font-mono font-bold text-sm md:text-base" style={{ color: zone.colorCode }}>{ticketNo}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
               {[
-                { label: "Ngày diễn", value: event.date },
-                { label: "Giờ vào cổng", value: event.time },
+                { label: "Ngày diễn", value: new Date(event.date).toLocaleDateString('vi-VN') },
+                { label: "Giờ vào cổng", value: new Date(event.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) },
                 { label: "Địa điểm", value: event.venue },
                 { label: "Thành phố", value: event.city },
               ].map(({ label, value }) => (
@@ -80,8 +82,8 @@ export default function ETicketPage() {
             </div>
 
             <div>
-              <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Nghệ sĩ</div>
-              <div className="text-xs md:text-sm text-white/60">{event.artistList.map(a => a.name).join(" · ")}</div>
+              <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Chi tiết</div>
+              <div className="text-xs md:text-sm text-white/60">{event.description}</div>
             </div>
           </div>
 
@@ -97,16 +99,12 @@ export default function ETicketPage() {
             {/* Zone + holder */}
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 shrink-0" style={{ backgroundColor: zone.color }} />
+                <div className="w-3 h-3 shrink-0" style={{ backgroundColor: zone.colorCode }} />
                 <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500">Khu vực</div>
               </div>
-              <div style={{ ...D, color: zone.color }} className="text-5xl font-black uppercase italic leading-none mb-3">{zone.name}</div>
-              <div className="text-[11px] md:text-xs text-gray-500 mb-5">{zone.type} · {qty} vé</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Khán giả</div>
-                  <div className="text-sm md:text-base font-bold text-white">{holderName}</div>
-                </div>
+              <div style={{ ...D, color: zone.colorCode }} className="text-5xl font-black uppercase italic leading-none mb-3">{zone.name}</div>
+              <div className="text-[11px] md:text-xs text-gray-500 mb-5">{qty} vé</div>
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <div className="text-[9px] md:text-[10px] font-mono tracking-[0.2em] uppercase text-gray-500 mb-1">Giá trị</div>
                   <div style={D} className="text-xl font-black text-white">{fmt(total)}đ</div>
@@ -116,32 +114,15 @@ export default function ETicketPage() {
 
             {/* QR */}
             <div className="shrink-0 flex flex-col items-center gap-2">
-              <div className="bg-white p-3">
-                <svg viewBox="0 0 100 100" className="w-28 h-28">
-                  <rect width="100" height="100" fill="white" />
-                  {/* Simulated data cells */}
-                  {Array.from({ length: 8 }, (_, r) => Array.from({ length: 8 }, (_, c) => {
-                    const skip = (r < 4 && c < 4) || (r < 4 && c > 5) || (r > 5 && c < 4);
-                    if (skip) return null;
-                    const on = (r * 11 + c * 7 + r * c * 3) % 3 !== 0;
-                    return on ? <rect key={`${r}${c}`} x={c * 12 + 2} y={r * 12 + 2} width={10} height={10} fill="black" /> : null;
-                  }))}
-                  {/* Corner markers */}
-                  {([[2, 2], [58, 2], [2, 58]] as [number, number][]).map(([x, y], i) => (
-                    <g key={i}>
-                      <rect x={x} y={y} width={32} height={32} fill="black" />
-                      <rect x={x + 4} y={y + 4} width={24} height={24} fill="white" />
-                      <rect x={x + 9} y={y + 9} width={14} height={14} fill="black" />
-                    </g>
-                  ))}
-                </svg>
+              <div className="bg-white p-2">
+                <QRCodeSVG value={ticketNo} size={100} style={{ width: "100%", height: "100%" }} />
               </div>
               <div className="font-mono text-[9px] md:text-[10px] text-gray-500 tracking-[0.12em]">{ticketNo}</div>
               <div className="text-[9px] md:text-[10px] text-gray-500">Quét tại cổng vào</div>
             </div>
           </div>
 
-          <div className="h-px w-full" style={{ backgroundColor: zone.color + "30" }} />
+          <div className="h-px w-full" style={{ backgroundColor: zone.colorCode + "30" }} />
         </div>
 
         <div className="text-center mt-3 text-[9px] md:text-[10px] font-mono text-gray-500 tracking-[0.15em]">

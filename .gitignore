@@ -19,3 +19,6 @@ mobile/build/
 backend/dist/
 frontend/dist/
 *.log
+
+
+/figma
