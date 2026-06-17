@@ -56,7 +56,7 @@ export default function AdminAIBioPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
-  const [bioResult, setBioResult] = useState<string>('');
+  const [descriptionResult, setDescriptionResult] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -92,7 +92,7 @@ export default function AdminAIBioPage() {
       return;
     }
     setFile(selectedFile);
-    setBioResult(''); // reset preview khi chọn file mới
+    setDescriptionResult(''); // reset preview khi chọn file mới
     setError(null);
   }, []);
 
@@ -109,7 +109,7 @@ export default function AdminAIBioPage() {
 
     setProcessing(true);
     setError(null);
-    setBioResult('');
+    setDescriptionResult('');
     pollCountRef.current = 0;
 
     try {
@@ -130,8 +130,8 @@ export default function AdminAIBioPage() {
         try {
           const concert = await adminService.getConcertById(selectedConcertId);
 
-          // Fix #3: Handle aiBioStatus = 'FAILED' explicitly
-          if (concert.aiBioStatus === 'FAILED') {
+          // Fix #3: Handle aiStatus = 'FAILED' explicitly
+          if (concert.aiStatus === 'FAILED') {
             if (pollRef.current) clearInterval(pollRef.current);
             setProcessing(false);
             setError('AI xử lý thất bại. Thử upload lại hoặc kiểm tra file PDF.');
@@ -139,9 +139,9 @@ export default function AdminAIBioPage() {
           }
 
           // Success
-          if (concert.aiBioStatus === 'DONE' && concert.aiBio) {
+          if (concert.aiStatus === 'DONE' && concert.description) {
             if (pollRef.current) clearInterval(pollRef.current);
-            setBioResult(concert.aiBio);
+            setDescriptionResult(concert.description);
             setProcessing(false);
           }
         } catch {
@@ -160,12 +160,12 @@ export default function AdminAIBioPage() {
 
   // ─── Save Bio ──────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!selectedConcertId || !bioResult) return;
+    if (!selectedConcertId || !descriptionResult) return;
     setIsSaving(true);
     setError(null);
     setSaveSuccess(false);
     try {
-      await adminService.updateConcert(selectedConcertId, { aiBio: bioResult });
+      await adminService.updateConcert(selectedConcertId, { description: descriptionResult });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -184,7 +184,7 @@ export default function AdminAIBioPage() {
     try {
       await adminService.resetBio(selectedConcertId);
       setProcessing(false);
-      setBioResult('');
+      setDescriptionResult('');
       setFile(null);
       // Refresh concert list
       const data = await adminService.getConcerts();
@@ -199,8 +199,8 @@ export default function AdminAIBioPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 style={D} className="text-4xl font-black uppercase italic text-gray-900 mb-2">AI Artist Bio</h1>
-        <p className="text-gray-600">Tạo giới thiệu nghệ sĩ tự động từ Press Kit</p>
+        <h1 style={D} className="text-4xl font-black uppercase italic text-gray-900 mb-2">Tạo Mô Tả Bằng AI</h1>
+        <p className="text-gray-600">Tự động tóm tắt tài liệu sự kiện và nối vào mô tả</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -300,7 +300,7 @@ export default function AdminAIBioPage() {
               disabled={processing || !file || !selectedConcertId || !!fileError}
               className="w-full bg-[#CCFF00] text-black font-bold text-sm px-6 py-3 hover:bg-[#B8E600] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-3"
             >
-              {processing ? 'Đang xử lý...' : 'Tạo Bio bằng AI'}
+              {processing ? 'Đang xử lý...' : 'Tạo Mô Tả AI'}
             </button>
 
             {/* Fix #4: Reset button — hiện khi có error hoặc processing stuck */}
@@ -311,7 +311,7 @@ export default function AdminAIBioPage() {
                 className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 font-semibold text-sm px-4 py-2.5 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 <RotateCcw size={14} className={isResetting ? 'animate-spin' : ''} />
-                {isResetting ? 'Đang reset...' : 'Reset AI Bio Status'}
+                {isResetting ? 'Đang reset...' : 'Reset AI Status'}
               </button>
             )}
 
@@ -338,17 +338,17 @@ export default function AdminAIBioPage() {
                 </p>
               </div>
             </div>
-          ) : bioResult ? (
+          ) : descriptionResult ? (
             <div>
               <textarea
-                value={bioResult}
-                onChange={e => setBioResult(e.target.value)}
+                value={descriptionResult}
+                onChange={e => setDescriptionResult(e.target.value)}
                 rows={12}
                 className="w-full px-4 py-3 bg-white border border-gray-200 text-sm focus:outline-none focus:border-gray-400 resize-none mb-4"
               />
               {saveSuccess && (
                 <div className="mb-3 bg-green-50 border border-green-200 px-4 py-3 text-sm font-semibold text-green-700">
-                  ✓ Đã lưu Bio thành công!
+                  ✓ Đã lưu mô tả thành công!
                 </div>
               )}
               <button
@@ -356,12 +356,12 @@ export default function AdminAIBioPage() {
                 disabled={isSaving}
                 className="w-full bg-gray-900 text-white font-bold text-sm px-6 py-3 hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSaving ? 'Đang lưu...' : 'Lưu Bio'}
+                {isSaving ? 'Đang lưu...' : 'Lưu Mô Tả'}
               </button>
             </div>
           ) : (
             <div className="text-sm text-gray-600 leading-relaxed">
-              <p className="mb-4">AI sẽ tạo ra đoạn giới thiệu ngắn gọn về nghệ sĩ dựa trên thông tin từ Press Kit.</p>
+              <p className="mb-4">AI sẽ tạo ra đoạn mô tả ngắn gọn về sự kiện/nghệ sĩ dựa trên thông tin từ Press Kit và nối vào mô tả hiện tại.</p>
               <p className="italic text-gray-500">Kết quả sẽ hiển thị ở đây sau khi xử lý...</p>
             </div>
           )}

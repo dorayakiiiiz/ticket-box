@@ -1,6 +1,5 @@
 class TicketModel {
   final String id;
-  final String? holderName;
   final String qrCode;
   final String status;
   final String? checkedInAt;
@@ -8,7 +7,6 @@ class TicketModel {
 
   TicketModel({
     required this.id,
-    this.holderName,
     required this.qrCode,
     required this.status,
     this.checkedInAt,
@@ -19,7 +17,6 @@ class TicketModel {
   factory TicketModel.fromJson(Map<String, dynamic> json) {
     return TicketModel(
       id: json['id'] as String? ?? '',
-      holderName: json['holderName'] as String?,
       qrCode: json['qrPayload'] as String? ?? '',
       status: json['status'] as String? ?? 'UNKNOWN',
       checkedInAt: json['checkedInAt'] as String?,
@@ -31,7 +28,6 @@ class TicketModel {
   factory TicketModel.fromMap(Map<String, dynamic> map) {
     return TicketModel(
       id: map['id'] as String? ?? '',
-      holderName: map['holderName'] as String?,
       qrCode: map['qrPayload'] as String? ?? '',
       status: map['status'] as String? ?? 'UNKNOWN',
       checkedInAt: map['checkedInAt'] as String?,
@@ -43,7 +39,6 @@ class TicketModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'holderName': holderName,
       'qrCode': qrCode,
       'status': status,
       'checkedInAt': checkedInAt,

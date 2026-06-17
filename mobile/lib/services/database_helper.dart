@@ -55,7 +55,6 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE tickets(
         id TEXT PRIMARY KEY,
-        holderName TEXT,
         qrCode TEXT NOT NULL UNIQUE,
         status TEXT NOT NULL,
         checkedInAt TEXT,
@@ -341,7 +340,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getScannedHistory() async {
     final db = await database;
     return await db.rawQuery(
-        'SELECT id, holderName, qrCode, status, checkedInAt, synced FROM tickets WHERE status = ? ORDER BY checkedInAt DESC',
+        'SELECT id, qrCode, status, checkedInAt, synced FROM tickets WHERE status = ? ORDER BY checkedInAt DESC',
         ['CHECKED_IN']
     );
   }

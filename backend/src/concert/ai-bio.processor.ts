@@ -34,17 +34,17 @@ export class AiBioProcessor extends WorkerHost {
 
       console.log(`[AiBioProcessor] Extracted ${cleanText.length} chars for concert ${concertId}`);
 
-      const bio = await this.aiProvider.summarize(cleanText);
+      const description = await this.aiProvider.summarize(cleanText);
 
       await this.concertRepo.update(concertId, {
-        aiBio: bio ?? undefined,
-        aiBioStatus: bio ? 'DONE' : 'FAILED',
+        description: description ?? '',
+        aiStatus: description ? 'DONE' : 'FAILED',
       });
 
-      console.log(`[AiBioProcessor] Concert ${concertId} → ${bio ? 'DONE' : 'FAILED'}`);
+      console.log(`[AiBioProcessor] Concert ${concertId} → ${description ? 'DONE' : 'FAILED'}`);
     } catch (error) {
       console.error(`[AiBioProcessor] Job ${job.id} failed for concert ${concertId}:`, error);
-      await this.concertRepo.update(concertId, { aiBioStatus: 'FAILED' });
+      await this.concertRepo.update(concertId, { aiStatus: 'FAILED' });
       throw error;
     }
   }

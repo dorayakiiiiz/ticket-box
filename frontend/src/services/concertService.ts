@@ -1,6 +1,5 @@
 import apiClient from './apiClient';
-import { EVENTS, ZONES } from './mockData';
-import type { Concert, EventInfo, ZoneInfo } from '../types';
+import type { Concert } from '../types';
 
 // Base URL cho server-side ISR fetch — chỉ define 1 lần ở đây
 // apiClient không support next: { revalidate } nên ISR phải dùng native fetch
@@ -43,14 +42,7 @@ export const concertService = {
     return res.data;
   },
 
-  // Legacy mock methods — used by booking flow (will be replaced in Phase 3)
-  getEventById: async (id: number): Promise<EventInfo | undefined> => {
-    return EVENTS.find(e => e.id === id);
-  },
 
-  getZones: async (): Promise<ZoneInfo[]> => {
-    return ZONES;
-  },
 };
 
 // SWR fetcher cho availability endpoint — dùng apiClient (tự attach auth header)

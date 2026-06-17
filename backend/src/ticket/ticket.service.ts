@@ -16,30 +16,30 @@ export class TicketService {
     private readonly ticketRepo: Repository<Ticket>,
     @InjectRepository(Concert) private readonly concertRepo: Repository<Concert>,
     private readonly dataSource: DataSource,
-    @InjectQueue('ticketbox.sync-checkins')  
+    @InjectQueue('ticketbox.sync-checkins')
     private readonly syncQueue: Queue,
-  ) {}
+  ) { }
 
   /**
    * Lấy danh sách vé của một concert cụ thể 
    */
 
   async findTicketByConcertId(id: string) {
-    
+
     const concert = await this.concertRepo.findOne({ where: { id } });
     if (!concert) throw new NotFoundException('Concert không tồn tại');
-    
+
     const tickets = await this.ticketRepo
       .createQueryBuilder('ticket')
-      .innerJoinAndSelect('ticket.ticketType', 'ticketType')
+      .innerJoin('ticket.order', 'order')
+      .innerJoin('order.ticketType', 'ticketType')
       .innerJoin('ticketType.concert', 'concert')
       .where('concert.id = :id', { id })
       .getMany();
-    
+
     return tickets.map(ticket => ({
       id: ticket.id,
-      holderName: ticket.holderName,     
-      qrPayload: ticket.qrCode,          
+      qrPayload: ticket.qrCode,
       status: ticket.status,
     }));
   }
@@ -55,15 +55,14 @@ export class TicketService {
 
     return {
       status: 'SUCCESS',
-      message: 'Đang đồng bộ với hệ thống',   
+      message: 'Đang đồng bộ với hệ thống',
       jobId: job.id,
       total: checkins.length,
     };
   }
 
   /**
-   * Lấy danh sách vé đã mua của một user, gom nhóm theo Order (đơn hàng).
-   * Chỉ lấy những đơn hàng đã thanh toán thành công (PAID).
+   * Lấy danh sách vé đã mua của một user
    */
   async getMyTickets(userId: string) {
     const orders = await this.orderRepo.find({
@@ -94,6 +93,8 @@ export class TicketService {
           id: concert.id,
           name: concert.name,
           date: concert.date,
+          city: concert.city,
+          venue: concert.venue,
         },
         ticketType: {
           name: order.ticketType.name,
@@ -128,11 +129,6 @@ export class TicketService {
 
     if (ticket.status === 'USED') {
       throw new BadRequestException('Vé này đã được sử dụng trước đó.');
-    }
-
-    // Nếu muốn, có thể check xem Order có đang PAID không
-    if (ticket.order.status !== OrderStatus.PAID) {
-      throw new BadRequestException('Đơn hàng chứa vé này chưa được thanh toán thành công.');
     }
 
     // Cập nhật trạng thái vé thành đã sử dụng

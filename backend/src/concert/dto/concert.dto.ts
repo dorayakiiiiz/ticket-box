@@ -63,8 +63,4 @@ export class UpdateConcertDto {
   @IsOptional()
   status?: ConcertStatus;
 
-  // Cho phép admin nhập tay tiểu sử nghệ sĩ qua modal (không qua PDF/AI pipeline)
-  @IsString()
-  @IsOptional()
-  aiBio?: string;
 }
