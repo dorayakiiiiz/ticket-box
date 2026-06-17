@@ -102,8 +102,8 @@ export default function AdminDashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                     <YAxis tickFormatter={v => `${(v / 1e9).toFixed(1)}B`} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={38} />
-                    <Tooltip formatter={(v: number, name: string) => [
-                      name === "revenue" ? `${(v / 1e9).toFixed(2)}B đ` : v.toLocaleString("vi-VN") + " vé",
+                    <Tooltip formatter={(v: any, name: any) => [
+                      name === "revenue" ? `${(v / 1e9).toFixed(2)}B đ` : Number(v).toLocaleString("vi-VN") + " vé",
                       name === "revenue" ? "Doanh thu" : "Vé bán"
                     ]} contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 0, fontSize: 11 }} />
                     <Area type="monotone" dataKey="revenue" stroke="#111827" strokeWidth={1.5} fill="url(#revGrad)" dot={{ r: 2.5, fill: "#111827" }} activeDot={{ r: 4 }} />
@@ -117,7 +117,7 @@ export default function AdminDashboard() {
                 <ResponsiveContainer width="100%" height={52}>
                   <BarChart data={REVENUE_CHART_DATA} margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
                     <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} hide />
-                    <Tooltip formatter={(v: number) => [v.toLocaleString("vi-VN") + " vé", "Vé bán"]} contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 0, fontSize: 11 }} cursor={{ fill: 'transparent' }} />
+                    <Tooltip formatter={(v: any) => [Number(v).toLocaleString("vi-VN") + " vé", "Vé bán"]} contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 0, fontSize: 11 }} cursor={{ fill: 'transparent' }} />
                     <Bar dataKey="tickets" radius={0}>
                       {REVENUE_CHART_DATA.map((_, i) => (
                         <Cell key={i} fill={i === REVENUE_CHART_DATA.length - 1 ? "#374151" : "#e5e7eb"} />

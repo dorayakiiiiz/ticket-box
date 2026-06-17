@@ -3,13 +3,13 @@ import { useState, useRef, useEffect } from 'react';
 import useSWR from 'swr';
 import { Upload, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { adminService, fetcher } from '../../services/adminService';
-import type { AiBioStatus } from '../../types';
+import type { AiStatus } from '../../types';
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
 
 type Props = {
   concertId: string;
-  initialStatus: AiBioStatus;
+  initialStatus: AiStatus;
   onStatusChange?: () => void;
 };
 
@@ -26,7 +26,7 @@ export default function UploadPdfButton({ concertId, initialStatus, onStatusChan
     { refreshInterval: 3000 }
   );
 
-  const currentStatus: AiBioStatus = data?.aiBioStatus ?? initialStatus;
+  const currentStatus: AiStatus = data?.aiBioStatus ?? initialStatus;
 
   // Dừng poll khi job hoàn thành, thông báo parent refresh
   useEffect(() => {
