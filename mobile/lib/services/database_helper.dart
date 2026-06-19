@@ -316,23 +316,12 @@ class DatabaseHelper {
     return result.first['count'] as int;
   }
 
-  // Đếm số vé đã quét hôm nay
   // Đếm tổng số vé đã quét
   Future<int> getScannedCount() async {
     final db = await database;
     final result = await db.rawQuery(
         'SELECT COUNT(*) as count FROM tickets WHERE status = ?',
         ['CHECKED_IN']
-    );
-    return result.first['count'] as int;
-  }
-
-  // Đếm số vé chưa đồng bộ
-  Future<int> getUnsyncedCount() async {
-    final db = await database;
-    final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM tickets WHERE status = ? AND synced = ?',
-        ['CHECKED_IN', 0]
     );
     return result.first['count'] as int;
   }
