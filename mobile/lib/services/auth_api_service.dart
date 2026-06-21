@@ -21,9 +21,9 @@ class AuthApiService {
       if (e.response?.statusCode == 401) {
         throw Exception('Sai email hoặc mật khẩu');
       }
-      throw Exception('Kết nối thất bại: ${e.message}');
+      throw Exception('Không thể kết nối vơi máy chủ');
     } catch (e) {
-      throw Exception('Đăng nhập thất bại: $e');
+      throw Exception('Đăng nhập thất bại');
     }
   }
 
@@ -32,7 +32,7 @@ class AuthApiService {
     try {
       await privateDio.post('/auth/logout');
     } catch (e) {
-      print('Logout API error: $e');
+      print('Logout API error');
     }
   }
 }
