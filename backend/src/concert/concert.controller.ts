@@ -5,6 +5,8 @@ import { ConcertService } from './concert.service';
 import { CreateConcertDto, UpdateConcertDto } from './dto/concert.dto';
 import { CreateTicketTypeDto, UpdateTicketTypeDto } from './dto/ticket-type.dto';
 import { Public } from 'src/common/guards/jwt.strategy';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { UserRole } from 'src/entities/user.entity';
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -18,6 +20,7 @@ const pdfFileFilter = (_req: any, file: Express.Multer.File, cb: any) => {
 };
 
 @Controller('concerts')
+@Roles(UserRole.ORGANIZER)
 export class ConcertController {
   constructor(private readonly concertService: ConcertService) { }
 

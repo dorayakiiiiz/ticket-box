@@ -26,6 +26,8 @@ import { PaymentModule } from './payment/payment.module';
 import { TicketModule } from './ticket/ticket.module';
 import { MailModule } from './mail/mail.module';
 
+import { RolesGuard } from './common/guards/roles.guard';
+
 @Module({
   imports: [
     // Pino logger — pino-pretty ở dev cho dễ đọc, JSON thuần ở production
@@ -133,7 +135,8 @@ import { MailModule } from './mail/mail.module';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_GUARD, useClass: JwtAuthGuard }
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard }
   ],
 })
 export class AppModule { }
