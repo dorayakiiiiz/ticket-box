@@ -12,10 +12,9 @@ interface User {
 
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isAuthModalOpen: boolean;
-  login: (user: User, token: string) => void;
+  login: (user: User) => void;
   logout: () => void;
   initialize: () => void;
   openAuthModal: () => void;
@@ -25,7 +24,6 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: null,
   isAuthenticated: false,
   isAuthModalOpen: false,
   isInitialized: false,
@@ -33,49 +31,28 @@ export const useAuthStore = create<AuthState>((set) => ({
   openAuthModal: () => set({ isAuthModalOpen: true }),
   closeAuthModal: () => set({ isAuthModalOpen: false }),
 
-  login: (user, token) => {
-    // Lưu vào Cookie (hỗ trợ cho Server Components lấy được token)
-    Cookies.set('token', token, { expires: 7, path: '/' });
+  login: (user) => {
+    // Chỉ lưu thông tin user (để render UI) vào cookie thường.
+    // Còn Token đã được Backend nhét vào httpOnly cookie tự động.
     Cookies.set('user', JSON.stringify(user), { expires: 7, path: '/' });
-
-    // Lưu vào localStorage dự phòng
-    // if (typeof window !== 'undefined') {
-    //   localStorage.setItem('token', token);
-    //   localStorage.setItem('user', JSON.stringify(user));
-    // }
-
-    // Dùng client cookie thay vì local storage để tránh tình trạng
-    // lần đầu tải web thì ko đọc dc token từ local storage từ window
-    // vì trên server nextjs làm gì có window nên đâu đọc dc token
-    // và khi client nhận html thì hydration chạy js trên trình duyệt
-    // xong mới hiện thông tin ra nên màn hình bị chớp, còn cookie thì ko bị
-    // do browser tự động gửi cookie chứa token lên lúc còn render phía server
-    // (nó render 2 lần 1 lần ở server 1 lần ở browser)
-
-    set({ user, token, isAuthenticated: true });
+    set({ user, isAuthenticated: true });
   },
 
   logout: () => {
-    Cookies.remove('token', { path: '/' });
     Cookies.remove('user', { path: '/' });
-    // if (typeof window !== 'undefined') {
-    //   localStorage.removeItem('token');
-    //   localStorage.removeItem('user');
-    // }
-    set({ user: null, token: null, isAuthenticated: false });
+    set({ user: null, isAuthenticated: false });
   },
 
   initialize: () => {
     if (typeof window !== 'undefined') {
-      const token = Cookies.get('token');
       const userStr = Cookies.get('user');
 
-      if (token && userStr) {
+      if (userStr) {
         try {
           const user = JSON.parse(userStr);
-          set({ user, token, isAuthenticated: true, isInitialized: true });
+          set({ user, isAuthenticated: true, isInitialized: true });
         } catch (e) {
-          set({ user: null, token: null, isAuthenticated: false, isInitialized: true });
+          set({ user: null, isAuthenticated: false, isInitialized: true });
         }
       } else {
         set({ isInitialized: true });

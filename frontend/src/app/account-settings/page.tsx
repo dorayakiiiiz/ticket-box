@@ -158,7 +158,8 @@ export default function AccountSettingsPage() {
     setTimeout(() => setSaved(false), 2200);
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    try { await authService.logout(); } catch(err) {}
     logout();
     router.push("/");
   }

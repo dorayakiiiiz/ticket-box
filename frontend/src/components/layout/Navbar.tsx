@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthModal from "../auth/AuthModal";
 import { useAuthStore } from "../../stores/authStore";
+import { authService } from "../../services/authService";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -27,6 +28,12 @@ export default function Navbar() {
       setSearchQuery("");
       setOpen(false);
     }
+  }
+
+  async function handleLogout() {
+    try { await authService.logout(); } catch(err) {}
+    logout();
+    setOpen(false);
   }
 
   return (
@@ -95,7 +102,7 @@ export default function Navbar() {
                       </Link>
                     </div>
                     <div className="border-t border-[#333] py-1">
-                      <button onClick={logout}
+                      <button onClick={handleLogout}
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[11px] font-semibold text-[#FF2D20] hover:bg-white/5 transition-colors text-left">
                         <LogOut size={13} /> Đăng xuất
                       </button>
@@ -144,7 +151,7 @@ export default function Navbar() {
                 <Link href="/my-tickets" onClick={() => setOpen(false)} className="text-left hover:text-white">Vé của tôi</Link>
                 <Link href="/account-settings" onClick={() => setOpen(false)} className="text-left hover:text-white">Cài đặt tài khoản</Link>
                 <button
-                  onClick={() => { logout(); setOpen(false); }}
+                  onClick={handleLogout}
                   className="text-left text-[#FF2D20]"
                 >
                   Đăng xuất
