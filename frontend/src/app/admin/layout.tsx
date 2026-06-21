@@ -6,7 +6,7 @@ import AdminSidebar from '../../components/admin/AdminSidebar';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { token, initialize } = useAuthStore();
+  const { isAuthenticated, initialize } = useAuthStore();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -15,12 +15,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [initialize]);
 
   useEffect(() => {
-    if (ready && !token) {
+    if (ready && !isAuthenticated) {
       router.replace('/');
     }
-  }, [ready, token, router]);
+  }, [ready, isAuthenticated, router]);
 
-  if (!ready || !token) {
+  if (!ready || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50" suppressHydrationWarning>
         <div className="flex items-center gap-3" suppressHydrationWarning>
