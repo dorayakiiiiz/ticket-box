@@ -1,4 +1,5 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto, SignupDto, SupabaseLoginDto, VerifyOtpDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
@@ -20,27 +21,40 @@ export class AuthController {
     return this.authService.signup(body.email, body.password, body.fullName);
   }
 
-  // Giới hạn xác minh OTP: 5 lần / 1 phút để chống Brute-force mã 6 số
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Public()
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  verifyOtp(@Body() body: VerifyOtpDto) {
-    return this.authService.verifyOtp(body.email, body.code);
+  async verifyOtp(@Body() body: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.verifyOtp(body.email, body.code);
+    res.cookie('token', result.token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+    return { user: result.user };
   }
 
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  login(@Body() body: LoginDto) {
-    return this.authService.login(body.email, body.password);
+  async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.login(body.email, body.password);
+    res.cookie('token', result.token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+    return { user: result.user };
   }
 
   @Public()
   @Post('supabase-login')
   @HttpCode(HttpStatus.OK)
-  supabaseLogin(@Body() body: SupabaseLoginDto) {
-    return this.authService.supabaseOAuthLogin(body.token);
+  async supabaseLogin(@Body() body: SupabaseLoginDto, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.supabaseOAuthLogin(body.token);
+    res.cookie('token', result.token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+    return { user: result.user };
+  }
+
+  @Public()
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('token', { path: '/' });
+    return { message: 'Đăng xuất thành công' };
   }
 
   // Chống Botnet spam email cấp lại mật khẩu (5 req / 1 phút)

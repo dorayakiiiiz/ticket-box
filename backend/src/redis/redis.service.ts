@@ -24,12 +24,10 @@ export class RedisService implements OnModuleInit {
     @InjectPinoLogger(RedisService.name)
     private readonly logger: PinoLogger,
     @InjectRedis() private readonly redis: Redis,
-  ) {}
+  ) { }
 
-  /**
-   * Khi NestJS khởi động, load Lua script vào bộ nhớ Redis
-   * Redis trả về SHA1 hash — sau đó dùng EVALSHA (nhanh hơn EVAL)
-   */
+  // Khi NestJS khởi động, load Lua script vào bộ nhớ Redis
+  // Redis trả về SHA1 hash — sau đó dùng EVALSHA (nhanh hơn EVAL)
   async onModuleInit() {
     try {
       const scriptPath = path.join(__dirname, 'lua', 'book-ticket.lua');
@@ -42,17 +40,7 @@ export class RedisService implements OnModuleInit {
     }
   }
 
-  // ─── Booking: Lua Script Atomic ──────────────────────────────────────────────
 
-  /**
-   * Chạy Lua Script atomic trên Redis để trừ vé + kiểm tra user limit
-   *
-   * @param ticketTypeId - UUID loại vé
-   * @param userId - UUID user đang mua
-   * @param quantity - Số vé muốn mua
-   * @param maxPerUser - Giới hạn tối đa vé/user cho loại vé này
-   * @returns 'SUCCESS' | 'SOLD_OUT' | 'LIMIT_EXCEEDED'
-   */
   async processBooking(
     ticketTypeId: string,
     userId: string,
@@ -61,7 +49,6 @@ export class RedisService implements OnModuleInit {
   ): Promise<string> {
     // Key pattern khớp với Phase 2: ticket_type:{id}:available (đã được seed)
     const ticketKey = `ticket_type:${ticketTypeId}:available`;
-    // Spec yêu cầu giới hạn mua là tính trên mỗi LOẠI VÉ (Ticket Type), không phải tính chung Event
     const userLimitKey = `user:${userId}:ticket_type:${ticketTypeId}:tickets_held`;
 
     const result = await this.redis.evalsha(
@@ -74,19 +61,10 @@ export class RedisService implements OnModuleInit {
     return result as string;
   }
 
-  // ─── Idempotency: Chặn double-click ──────────────────────────────────────────
-
-  /**
-   * Kiểm tra Idempotency Key bằng SET NX (Set if Not eXists)
-   * Nếu key mới (chưa tồn tại) → set thành 'processing', expire 1h, return true
-   * Nếu key đã tồn tại → request trùng lặp, return false
-   *
-   * @param key - UUID từ FE header 'Idempotency-Key'
-   * @returns true nếu request mới, false nếu trùng lặp
-   */
+  // Idempotency: Chặn double-click
   async checkIdempotency(key: string): Promise<boolean> {
     // SET NX: chỉ set nếu key chưa tồn tại
-    // EX 3600: expire sau 1 tiếng (tránh key tồn tại mãi mãi)
+    // EX 3600: expire sau 1 tiếng 
     const result = await this.redis.set(
       `idempotency:${key}`,
       'processing',
@@ -97,38 +75,17 @@ export class RedisService implements OnModuleInit {
     return result === 'OK';
   }
 
-  // ─── Job Result: Lưu kết quả order cho FE polling ────────────────────────────
 
-  /**
-   * Sau khi Worker tạo order xong trong Postgres, lưu orderId vào Redis
-   * để FE polling endpoint có thể trả kết quả ngay lập tức
-   *
-   * @param idempotencyKey - UUID gắn liền với booking request
-   * @param orderId - UUID order vừa tạo trong Postgres
-   */
   async setJobResult(idempotencyKey: string, orderId: string): Promise<void> {
-    // Expire sau 1h — FE sẽ poll trong vài giây, key không cần giữ lâu
+    // Expire sau 1h, FE sẽ poll trong vài giây, key không cần giữ lâu
     await this.redis.set(`job_result:${idempotencyKey}`, orderId, 'EX', 3600);
   }
 
-  /**
-   * FE polling: kiểm tra Worker đã tạo order xong chưa
-   * @returns orderId nếu đã xong, null nếu đang processing
-   */
   async getJobResult(idempotencyKey: string): Promise<string | null> {
     return this.redis.get(`job_result:${idempotencyKey}`);
   }
 
-  // ─── Compensating Transaction: Hoàn vé khi Worker lỗi ────────────────────────
-
-  /**
-   * Khi Worker gặp lỗi khi ghi Postgres, phải trả lại vé vào Redis
-   * để không mất vé "ảo" (Redis đã trừ nhưng Postgres chưa ghi)
-   *
-   * @param ticketTypeId - UUID loại vé cần hoàn
-   * @param userId - UUID user cần giảm counter
-   * @param quantity - Số vé cần hoàn
-   */
+  // Hoàn vé khi Worker lỗi 
   async rollbackBooking(
     ticketTypeId: string,
     userId: string,
@@ -148,16 +105,8 @@ export class RedisService implements OnModuleInit {
     );
   }
 
-  // ─── Distributed Lock ────────────────────────────────────────────────────────
-
-  /**
-   * Tạo Distributed Lock (Khóa phân tán) bằng Redis SET NX
-   * Dùng để ngăn chặn nhiều server cùng chạy 1 cronjob (tránh Race Condition)
-   * 
-   * @param key - Tên của lock
-   * @param ttlSeconds - Thời gian sống của lock (giây)
-   * @returns true nếu lấy được lock, false nếu đã có server khác giữ
-   */
+  // Tạo Distributed Lock (Khóa phân tán) bằng Redis SET NX
+  // Dùng để ngăn chặn nhiều server cùng chạy 1 cronjob (tránh Race Condition)
   async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
     const result = await this.redis.set(key, 'locked', 'EX', ttlSeconds, 'NX');
     return result === 'OK';

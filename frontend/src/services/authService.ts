@@ -12,6 +12,11 @@ export const authService = {
     return response.data;
   },
 
+  logout: async () => {
+    const response = await apiClient.post('/auth/logout');
+    return response.data;
+  },
+
   verifyOtp: async (email: string, code: string) => {
     const response = await apiClient.post('/auth/verify-otp', { email, code });
     return response.data;

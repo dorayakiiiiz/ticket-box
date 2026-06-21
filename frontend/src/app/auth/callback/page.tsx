@@ -28,7 +28,7 @@ export default function AuthCallbackPage() {
         const data = await authService.googleLogin(session.access_token);
 
         // Lưu vào Zustand
-        useAuthStore.getState().login(data.user, data.token);
+        useAuthStore.getState().login(data.user);
 
         // Chuyển hướng về trang chủ
         router.push('/');

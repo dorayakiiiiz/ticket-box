@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 
+import { authService } from '../../services/authService';
+
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
 
 const NAV_ITEMS = [
@@ -75,7 +77,11 @@ export default function AdminSidebar() {
           Về trang chủ
         </Link>
         <button
-          onClick={() => { logout(); router.push('/'); }}
+          onClick={async () => { 
+            try { await authService.logout(); } catch(err) {} 
+            logout(); 
+            router.push('/'); 
+          }}
           className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
         >
           <LogOut size={16} />

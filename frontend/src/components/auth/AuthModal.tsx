@@ -45,7 +45,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
     try {
       if (tab === 'login') {
         const data = await authService.login(email, password);
-        useAuthStore.getState().login(data.user, data.token);
+        useAuthStore.getState().login(data.user);
         onClose();
       } else if (tab === 'register') {
         if (step === 'form') {
@@ -64,7 +64,7 @@ export default function AuthModal({ onClose }: { onClose: () => void }) {
             return;
           }
           const data = await authService.verifyOtp(email, code);
-          useAuthStore.getState().login(data.user, data.token);
+          useAuthStore.getState().login(data.user);
           onClose();
         }
       } else if (tab === 'forgot') {
