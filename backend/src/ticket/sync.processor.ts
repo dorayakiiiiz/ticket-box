@@ -20,7 +20,7 @@ export class SyncCheckinProcessor extends WorkerHost {
   }
 
   async process(job: Job<SyncCheckinJobData>): Promise<any> {
-    const { checkins} = job.data;
+    const { checkins } = job.data;
 
     let success = 0;
     let alreadyCheckedIn = 0;
@@ -42,7 +42,7 @@ export class SyncCheckinProcessor extends WorkerHost {
 
           if (ticket.status === TicketStatus.VALID) {
             ticket.status = TicketStatus.USED;
-            ticket.updatedAt = new Date(checkin.timestamp);  
+            ticket.updatedAt = new Date(checkin.timestamp);
             await manager.save(ticket);
             success++;
           } else {
@@ -50,12 +50,12 @@ export class SyncCheckinProcessor extends WorkerHost {
           }
         });
       } catch (error) {
-        this.logger.error(`❌ Failed to sync ${checkin.id}:`, error);
+        this.logger.error(`Failed to sync ${checkin.id}:`, error);
       }
     }
 
     this.logger.info(
-      `✅ Sync completed: success=${success}, already=${alreadyCheckedIn}, notFound=${notFound}`,
+      `Sync completed: success=${success}, already=${alreadyCheckedIn}, notFound=${notFound}`,
     );
 
     return { success, alreadyCheckedIn, notFound };
