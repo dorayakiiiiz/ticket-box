@@ -27,7 +27,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async verifyOtp(@Body() body: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.verifyOtp(body.email, body.code);
-    res.cookie('token', result.token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('token', result.token, { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
     return { user: result.user };
   }
 
@@ -36,7 +37,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(body.email, body.password);
-    res.cookie('token', result.token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('token', result.token, { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
     return { user: result.user };
   }
 
@@ -45,7 +47,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async supabaseLogin(@Body() body: SupabaseLoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.supabaseOAuthLogin(body.token);
-    res.cookie('token', result.token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('token', result.token, { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, path: '/' });
     return { user: result.user };
   }
 
@@ -53,7 +56,8 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', { path: '/' });
+    const isProd = process.env.NODE_ENV === 'production';
+    res.clearCookie('token', { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax', path: '/' });
     return { message: 'Đăng xuất thành công' };
   }
 
