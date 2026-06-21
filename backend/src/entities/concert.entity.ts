@@ -39,12 +39,9 @@ export class Concert {
   @Column({ type: 'enum', enum: ConcertStatus, default: ConcertStatus.UPCOMING })
   status: ConcertStatus;
 
-  @Column({ nullable: true, type: 'text' })
-  aiBio: string;
-
   // IDLE | PROCESSING | DONE | FAILED — track trạng thái job AI
   @Column({ default: 'IDLE' })
-  aiBioStatus: string;
+  aiStatus: string;
 
   // Track if a reminder email has been sent to users 24h before
   @Column({ default: false })

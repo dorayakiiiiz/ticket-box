@@ -123,11 +123,11 @@ export class ConcertService implements OnApplicationBootstrap {
     const concert = await this.findOne(id);
 
     // Chặn upload trùng — tránh race condition 2 worker chạy song song
-    if (concert.aiBioStatus === 'PROCESSING') {
+    if (concert.aiStatus === 'PROCESSING') {
       throw new ConflictException('AI Bio đang được xử lý, vui lòng chờ');
     }
 
-    await this.concertRepo.update(id, { aiBioStatus: 'PROCESSING' });
+    await this.concertRepo.update(id, { aiStatus: 'PROCESSING' });
 
     await this.aiBioQueue.add(
       'process-pdf-bio',
@@ -149,10 +149,10 @@ export class ConcertService implements OnApplicationBootstrap {
       throw new ForbiddenException('Chỉ ban tổ chức mới có quyền thao tác');
     }
     const concert = await this.findOne(id);
-    if (concert.aiBioStatus !== 'PROCESSING' && concert.aiBioStatus !== 'FAILED') {
+    if (concert.aiStatus !== 'PROCESSING' && concert.aiStatus !== 'FAILED') {
       throw new ConflictException('Chỉ reset được khi đang PROCESSING hoặc FAILED');
     }
-    await this.concertRepo.update(id, { aiBioStatus: 'IDLE', aiBio: '' });
+    await this.concertRepo.update(id, { aiStatus: 'IDLE' });
     return { message: 'Đã reset AI Bio status' };
   }
 

@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Order } from './order.entity';
-import { Ticket } from './ticket.entity';
 
 export enum UserRole {
   AUDIENCE = 'AUDIENCE',
@@ -22,6 +21,9 @@ export class User {
   @Column({ nullable: true })
   fullName?: string;
 
+  @Column({ nullable: true })
+  phone?: string;
+
   @Column({ type: 'enum', enum: UserRole, default: UserRole.AUDIENCE })
   role: UserRole;
 
@@ -30,9 +32,6 @@ export class User {
 
   @OneToMany(() => Order, order => order.user)
   orders: Order[];
-
-  @OneToMany(() => Ticket, ticket => ticket.user)
-  tickets: Ticket[];
 
   @CreateDateColumn()
   createdAt: Date;

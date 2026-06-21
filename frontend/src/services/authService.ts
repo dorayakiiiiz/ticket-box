@@ -31,5 +31,10 @@ export const authService = {
   resetPassword: async (email: string, code: string, newPassword: string) => {
     const response = await apiClient.post('/auth/reset-password', { email, code, newPassword });
     return response.data;
+  },
+
+  updateProfile: async (fullName?: string, phone?: string) => {
+    const response = await apiClient.post('/auth/profile', { fullName, phone });
+    return response.data;
   }
 };

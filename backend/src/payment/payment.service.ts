@@ -170,8 +170,6 @@ export class PaymentService {
       for (let i = 0; i < order.quantity; i++) {
         const ticket = new Ticket();
         ticket.order = order;
-        ticket.ticketType = order.ticketType;
-        ticket.user = order.user;
         ticket.qrCode = uuidv4();
         ticket.status = TicketStatus.VALID;
         tickets.push(ticket);

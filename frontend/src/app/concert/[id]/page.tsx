@@ -117,27 +117,14 @@ export default async function EventDetailPage({
                 style={D}
                 className="text-2xl font-black uppercase italic mb-4"
               >
-                Về chương trình
+                Giới thiệu
               </h2>
               <p className="text-sm md:text-base text-gray-400 leading-relaxed">
                 {concert.description}
               </p>
             </div>
 
-            {/* AI Bio */}
-            {concert.aiBio && (
-              <div className="mb-10">
-                <h2
-                  style={D}
-                  className="text-2xl font-black uppercase italic mb-4"
-                >
-                  Giới thiệu nghệ sĩ
-                </h2>
-                <p className="text-sm md:text-base text-gray-400 leading-relaxed">
-                  {concert.aiBio}
-                </p>
-              </div>
-            )}
+
 
             {/* Ticket types — title + TicketAvailability Client Component */}
             {concert.ticketTypes?.length > 0 && (
@@ -146,7 +133,7 @@ export default async function EventDetailPage({
                   style={D}
                   className="text-2xl font-black uppercase italic mb-4"
                 >
-                  Loại vé & Giá
+                  Thông tin vé
                 </h2>
                 {/* TicketAvailability là Client Component, poll SWR mỗi 5 giây.
                     Chỉ phần số vé được cập nhật, không re-render lại toàn trang.
@@ -187,9 +174,7 @@ export default async function EventDetailPage({
               {/* BookingButton — Client Component nhỏ vì cần router.push */}
               <BookingButton concertId={concert.id} />
 
-              <button className="w-full mt-2 border border-[#333] text-sm md:text-base font-semibold py-3 text-gray-400 hover:text-white hover:border-white/30 transition-colors bg-transparent">
-                Thêm vào lịch nhắc
-              </button>
+
             </div>
           </div>
         </div>
