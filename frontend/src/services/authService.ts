@@ -38,8 +38,21 @@ export const authService = {
     return response.data;
   },
 
+  // PATCH /auth/profile — cập nhật họ tên và SĐT
   updateProfile: async (fullName?: string, phone?: string) => {
-    const response = await apiClient.post('/auth/profile', { fullName, phone });
+    const response = await apiClient.patch('/auth/profile', { fullName, phone });
     return response.data;
-  }
+  },
+
+  // PATCH /auth/change-password — đổi mật khẩu
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const response = await apiClient.patch('/auth/change-password', { currentPassword, newPassword });
+    return response.data;
+  },
+
+  // DELETE /auth/account — soft delete tài khoản
+  deleteAccount: async () => {
+    const response = await apiClient.delete('/auth/account');
+    return response.data;
+  },
 };

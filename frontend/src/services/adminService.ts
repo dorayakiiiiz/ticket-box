@@ -21,9 +21,45 @@ type UpdateConcertPayload = Partial<CreateConcertPayload> & {
 export const fetcher = (url: string) =>
   apiClient.get(url).then((r) => r.data);
 
+type PaginatedConcerts = {
+  data: Concert[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+};
+
+export type DashboardData = {
+  stats: {
+    totalRevenue: number;
+    totalTicketsSold: number;
+    activeEvents: number;
+    checkedInToday: number;
+    updatedAt: string;
+  };
+  revenueChart: { label: string; revenue: number; tickets: number }[];
+  concertPerformance: {
+    id: string;
+    name: string;
+    soldQuantity: number;
+    totalQuantity: number;
+    soldPercent: number;
+    revenue: number;
+  }[];
+};
+
 export const adminService = {
-  getConcerts: async (): Promise<Concert[]> => {
-    const res = await apiClient.get('/concerts');
+  getDashboard: async (range: '7d' | '30d' = '7d'): Promise<DashboardData> => {
+    const res = await apiClient.get(`/admin/dashboard?range=${range}`);
+    return res.data;
+  },
+
+  getConcerts: async (page = 1, limit = 12, search = '', status = '', city = ''): Promise<PaginatedConcerts> => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(search ? { search } : {}),
+      ...(status ? { status } : {}),
+      ...(city ? { city } : {}),
+    });
+    const res = await apiClient.get(`/concerts?${params}`);
     return res.data;
   },
 

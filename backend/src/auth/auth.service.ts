@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { User } from '../entities/user.entity';
 import { Otp } from '../entities/otp.entity';
 import { MailService } from '../mail/mail.service';
@@ -16,6 +17,8 @@ export class AuthService {
   private supabase: SupabaseClient;
 
   constructor(
+    @InjectPinoLogger(AuthService.name)
+    private readonly logger: PinoLogger,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Otp) private otpRepo: Repository<Otp>,
     private jwtService: JwtService,
@@ -84,7 +87,7 @@ export class AuthService {
     await this.otpRepo.delete({ email });
 
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, hasPassword: !!user.password } };
   }
 
   async login(email: string, pass: string) {
@@ -98,7 +101,7 @@ export class AuthService {
     }
 
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, hasPassword: true } };
   }
 
   async supabaseOAuthLogin(supabaseToken: string) {
@@ -121,7 +124,7 @@ export class AuthService {
 
     // Trả về JWT của hệ thống TicketBox
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, hasPassword: false } };
   }
   async forgotPassword(email: string) {
     const user = await this.userRepo.findOne({ where: { email } });
@@ -176,5 +179,57 @@ export class AuthService {
     await this.otpRepo.delete({ email });
 
     return { message: 'Mật khẩu đã được khôi phục thành công. Vui lòng đăng nhập lại.' };
+  }
+
+  // Cập nhật họ tên và số điện thoại của user đang đăng nhập
+  async updateProfile(userId: string, fullName?: string, phone?: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Người dùng không tồn tại!');
+
+    if (fullName !== undefined) user.fullName = fullName;
+    if (phone !== undefined) user.phone = phone;
+    await this.userRepo.save(user);
+
+    return {
+      message: 'Cập nhật thông tin thành công.',
+      user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, role: user.role, hasPassword: !!user.password },
+    };
+  }
+
+  // Đổi mật khẩu — kiểm tra mật khẩu hiện tại trước, không cho phép tài khoản OAuth
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Người dùng không tồn tại!');
+
+    if (!user.password) {
+      throw new BadRequestException('Tài khoản Google không sử dụng mật khẩu.');
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không đúng!');
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    await this.userRepo.save(user);
+
+    return { message: 'Đổi mật khẩu thành công.' };
+  }
+
+  // Soft delete: vô hiệu hoá tài khoản, giữ lại Order/Ticket lịch sử
+  async deleteAccount(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Người dùng không tồn tại!');
+
+    // Dùng update() để SET NULL trực tiếp trên DB — không cần gán null lên object entity
+    await this.userRepo.update(userId, {
+      fullName: null,
+      phone: null,
+      password: null,
+      email: `deleted_${userId}@deleted.local`,
+    } as any);
+    await this.userRepo.softDelete(userId);
+
+    return { message: 'Tài khoản đã được xoá.' };
   }
 }
