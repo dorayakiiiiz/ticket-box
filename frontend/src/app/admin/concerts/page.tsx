@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { adminService } from '../../../services/adminService';
 import ConcertModal from '../../../components/admin/ConcertModal';
 import type { Concert } from '../../../types';
@@ -105,44 +105,65 @@ export default function AdminConcertsPage() {
 
       {/* Concerts Grid — Figma: 3-col grid with image cards */}
       {!isLoading && !error && filtered.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map(event => {
-            const sold = event.ticketTypes?.length > 0
-              ? Math.round(event.ticketTypes.reduce((s, t) => s + t.soldQuantity, 0) / event.ticketTypes.reduce((s, t) => s + t.totalQuantity, 0) * 100)
-              : 0;
-            return (
-              <div key={event.id} className="bg-white border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors cursor-pointer" onClick={() => openView(event)}>
-                <div className="relative h-40">
-                  {event.coverImageUrl ? (
-                    <img src={event.coverImageUrl} alt={event.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm">No Image</div>
-                  )}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map(event => {
+              const sold = event.ticketTypes?.length > 0
+                ? Math.round(event.ticketTypes.reduce((s, t) => s + t.soldQuantity, 0) / event.ticketTypes.reduce((s, t) => s + t.totalQuantity, 0) * 100)
+                : 0;
+              return (
+                <div key={event.id} className="bg-white border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors cursor-pointer" onClick={() => openView(event)}>
+                  <div className="relative h-40">
+                    {event.coverImageUrl ? (
+                      <img src={event.coverImageUrl} alt={event.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm">No Image</div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 style={D} className="text-lg font-black uppercase text-gray-900 mb-1">{event.name}</h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {new Date(event.date).toLocaleDateString('vi-VN')} · {event.venue}
+                    </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-gray-500">Đã bán {sold}%</span>
+                    </div>
+                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-4">
+                      <div className="h-full bg-[#CCFF00]" style={{ width: `${sold}%` }} />
+                    </div>
+                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => openEdit(event)} className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-1">
+                        <Edit size={12} /> Sửa
+                      </button>
+                      <button onClick={() => setDeletingConcert(event)} className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1">
+                        <Trash2 size={12} /> Xóa
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-4">
-                  <h3 style={D} className="text-lg font-black uppercase text-gray-900 mb-1">{event.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3">
-                    {new Date(event.date).toLocaleDateString('vi-VN')} · {event.venue}
-                  </p>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-gray-500">Đã bán {sold}%</span>
-                  </div>
-                  <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-4">
-                    <div className="h-full bg-[#CCFF00]" style={{ width: `${sold}%` }} />
-                  </div>
-                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => openEdit(event)} className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-1">
-                      <Edit size={12} /> Sửa
-                    </button>
-                    <button onClick={() => setDeletingConcert(event)} className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1">
-                      <Trash2 size={12} /> Xóa
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination UI */}
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-sm text-gray-500">Hiển thị <span className="font-semibold text-gray-900">1</span> đến <span className="font-semibold text-gray-900">6</span> trong số <span className="font-semibold text-gray-900">12</span> concert</p>
+            <div className="flex gap-1">
+              <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed">
+                <ChevronLeft size={16} />
+              </button>
+              <button className="flex items-center justify-center w-8 h-8 border border-gray-900 bg-gray-900 text-white text-sm font-medium">
+                1
+              </button>
+              <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors">
+                2
+              </button>
+              <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Empty */}
