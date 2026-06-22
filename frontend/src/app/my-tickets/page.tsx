@@ -133,12 +133,12 @@ export default function MyTicketsPage() {
   }
 
   const filtered = flatTickets.filter(item => {
-    const isUsed = item.ticket.status === "USED" || item.ticket.status === "CHECKED_IN";
+    const isUsed = item.ticket.status === "USED";
     return tab === "used" ? isUsed : !isUsed;
   });
 
-  const upcomingCount = flatTickets.filter(item => item.ticket.status !== "USED" && item.ticket.status !== "CHECKED_IN").length;
-  const usedCount = flatTickets.filter(item => item.ticket.status === "USED" || item.ticket.status === "CHECKED_IN").length;
+  const upcomingCount = flatTickets.filter(item => item.ticket.status !== "USED").length;
+  const usedCount = flatTickets.filter(item => item.ticket.status === "USED").length;
 
   return (
     <>

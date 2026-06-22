@@ -151,7 +151,7 @@ export class PaymentService {
       // Lúc này Order đã an toàn, ta lấy thêm TicketType và User để xài cho việc tạo vé
       const orderWithRelations = await queryRunner.manager.findOneOrFail(Order, {
         where: { id: order.id },
-        relations: { ticketType: true, user: true },
+        relations: { ticketType: { concert: true }, user: true },
       });
 
       // Gắn data quan hệ ngược lại vào biến order hiện tại
@@ -222,18 +222,8 @@ export class PaymentService {
               <tr>
                 <!-- Left side: Info -->
                 <td style="padding: 20px; vertical-align: top; width: 70%; border-right: 1px dashed #444444;">
-                  <!-- Tag row -->
-                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12px;">
-                    <tr>
-                      <td align="left">
-                        <span style="background-color: ${color}; color: ${accentText}; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; padding: 2px 6px;">SẮP DIỄN RA</span>
-                        <span style="color: #888888; font-size: 10px; font-family: monospace; margin-left: 8px;">${t.id ? t.id.substring(0,8).toUpperCase() : t.qrCode.substring(0,8).toUpperCase()}</span>
-                      </td>
-                    </tr>
-                  </table>
-                  
                   <!-- Concert Name -->
-                  <h3 style="color: #ffffff; font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; letter-spacing: -0.5px; margin: 0 0 16px 0; line-height: 1.2;">
+                  <h3 style="color: #ffffff; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.5px; margin: 0 0 16px 0; line-height: 1.2;">
                     ${order.ticketType.concert?.name || 'SỰ KIỆN ÂM NHẠC'}
                   </h3>
                   
