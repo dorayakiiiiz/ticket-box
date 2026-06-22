@@ -8,6 +8,13 @@ import { adminService, type DashboardData } from '../../services/adminService';
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
 function fmt(n: number) { return n.toLocaleString('vi-VN'); }
 
+function formatCurrencyShort(value: number) {
+  if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(1)}K`;
+  return String(value);
+}
+
 function AdminStatCard({ title, value, icon, sub }: { title: string; value: string; icon: React.ReactNode; sub?: string }) {
   return (
     <div className="bg-white border border-gray-200 p-6">
@@ -60,7 +67,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <AdminStatCard title="Tổng doanh thu" value={stats ? `${(stats.totalRevenue / 1e9).toFixed(1)}B đ` : '--'} icon={<DollarSign size={20} />} />
+        <AdminStatCard title="Tổng doanh thu" value={stats ? `${formatCurrencyShort(stats.totalRevenue)} đ` : '--'} icon={<DollarSign size={20} />} />
         <AdminStatCard title="Vé đã bán" value={stats ? fmt(stats.totalTicketsSold) : '--'} icon={<Ticket size={20} />} />
         <AdminStatCard title="Sự kiện sắp diễn" value={stats ? String(stats.activeEvents) : '--'} icon={<Calendar size={20} />} />
         <AdminStatCard title="Đã check-in hôm nay" value={stats ? String(stats.checkedInToday) : '--'} icon={<UserCheck size={20} />} />
@@ -96,9 +103,9 @@ export default function AdminDashboard() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                     <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                    <YAxis tickFormatter={v => `${(v / 1e9).toFixed(1)}B`} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={38} />
+                    <YAxis tickFormatter={v => formatCurrencyShort(v as number)} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={38} />
                     <Tooltip formatter={(v: any, name: any) => [
-                      name === "revenue" ? `${(v / 1e9).toFixed(2)}B đ` : Number(v).toLocaleString("vi-VN") + " vé",
+                      name === "revenue" ? `${formatCurrencyShort(Number(v))} đ` : Number(v).toLocaleString("vi-VN") + " vé",
                       name === "revenue" ? "Doanh thu" : "Vé bán"
                     ]} contentStyle={{ border: "1px solid #e5e7eb", borderRadius: 0, fontSize: 11 }} />
                     <Area type="monotone" dataKey="revenue" stroke="#111827" strokeWidth={1.5} fill="url(#revGrad)" dot={{ r: 2.5, fill: "#111827" }} activeDot={{ r: 4 }} />
@@ -154,7 +161,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[10px] text-gray-400">{fmt(c.soldQuantity)}/{fmt(c.totalQuantity)} vé</span>
-                      <span className="text-[10px] font-semibold text-gray-500">{(c.revenue / 1e9).toFixed(1)}B đ</span>
+                      <span className="text-[10px] font-semibold text-gray-500">{formatCurrencyShort(c.revenue)} đ</span>
                     </div>
                   </div>
                 </Link>
@@ -166,7 +173,7 @@ export default function AdminDashboard() {
           <div className="px-5 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
             <span className="text-xs text-gray-500">Tổng doanh thu</span>
             <span style={D} className="text-xl font-black text-gray-900">
-              {stats ? `${(stats.totalRevenue / 1e9).toFixed(1)} tỷ đồng` : '--'}
+              {stats ? `${formatCurrencyShort(stats.totalRevenue)} đồng` : '--'}
             </span>
           </div>
         </div>
