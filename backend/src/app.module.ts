@@ -6,7 +6,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import Redis from 'ioredis';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { JwtAuthGuard } from './common/guards/jwt.strategy';
 import { AppController } from './app.controller';
@@ -27,7 +27,6 @@ import { PaymentModule } from './payment/payment.module';
 import { TicketModule } from './ticket/ticket.module';
 import { MailModule } from './mail/mail.module';
 import { RolesGuard } from './common/guards/roles.guard';
-import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 @Module({
   imports: [
@@ -138,8 +137,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
   providers: [
     AppService,
     { provide: APP_GUARD,       useClass: JwtAuthGuard },
-    { provide: APP_GUARD,       useClass: RolesGuard },
-    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    { provide: APP_GUARD,       useClass: RolesGuard }
   ],
 })
 export class AppModule { }
