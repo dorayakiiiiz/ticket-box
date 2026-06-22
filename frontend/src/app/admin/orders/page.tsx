@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { Eye, Search, X, Ticket } from 'lucide-react';
+import { Eye, Search, X, Ticket, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
 function fmt(n: number) { return n.toLocaleString('vi-VN'); }
@@ -138,6 +138,25 @@ export default function AdminOrdersPage() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Pagination UI */}
+      <div className="mt-6 flex items-center justify-between">
+        <p className="text-sm text-gray-500">Hiển thị <span className="font-semibold text-gray-900">1</span> đến <span className="font-semibold text-gray-900">7</span> trong số <span className="font-semibold text-gray-900">12</span> đơn hàng</p>
+        <div className="flex gap-1">
+          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed">
+            <ChevronLeft size={16} />
+          </button>
+          <button className="flex items-center justify-center w-8 h-8 border border-gray-900 bg-gray-900 text-white text-sm font-medium">
+            1
+          </button>
+          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors">
+            2
+          </button>
+          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
+            <ChevronRight size={16} />
+          </button>
         </div>
       </div>
 

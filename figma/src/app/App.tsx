@@ -33,6 +33,7 @@ type PageState =
   | { page: "staff-sync"; eventId: number }
   | { page: "staff-scanner"; eventId: number }
   | { page: "staff-history"; eventId: number }
+  | { page: "staff-settings"; eventId: number }
   | { page: "my-tickets" }
   | { page: "account-settings" }
   | { page: "search-results"; query: string };
@@ -1534,26 +1535,22 @@ function AdminCheckin({ onNav }: { onNav: (s: PageState) => void }) {
 // ─── MOBILE STAFF APP ─────────────────────────────────────────────────────────
 
 // Mobile Bottom Nav
-function MobileBottomNav({ active, onNav, eventId }: { active: "scanner" | "history"; onNav: (s: PageState) => void; eventId: number }) {
+function MobileBottomNav({ active, onNav, eventId }: { active: "scanner" | "history" | "settings"; onNav: (s: PageState) => void; eventId: number }) {
+  const tabs = [
+    { id: "scanner" as const,  icon: <ScanLine size={20} />, label: "Quét vé",  page: { page: "staff-scanner" as const,  eventId } },
+    { id: "history" as const,  icon: <History size={20} />,  label: "Lịch sử",  page: { page: "staff-history" as const,  eventId } },
+    { id: "settings" as const, icon: <Settings size={20} />, label: "Cài đặt",  page: { page: "staff-settings" as const, eventId } },
+  ];
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 safe-area-inset-bottom">
-      <div className="flex items-center justify-around px-6 py-3">
-        <button
-          onClick={() => onNav({ page: "staff-scanner", eventId })}
-          className={`flex flex-col items-center gap-1 px-6 py-2 transition-colors ${
-            active === "scanner" ? "text-gray-900" : "text-gray-400"
-          }`}>
-          <ScanLine size={22} />
-          <span className="text-xs font-bold">Quét vé</span>
-        </button>
-        <button
-          onClick={() => onNav({ page: "staff-history", eventId })}
-          className={`flex flex-col items-center gap-1 px-6 py-2 transition-colors ${
-            active === "history" ? "text-gray-900" : "text-gray-400"
-          }`}>
-          <History size={22} />
-          <span className="text-xs font-bold">Lịch sử</span>
-        </button>
+      <div className="flex items-center justify-around">
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => onNav(t.page)}
+            className={`flex flex-col items-center gap-1 flex-1 py-3 transition-colors ${active === t.id ? "text-gray-900" : "text-gray-400"}`}>
+            {t.icon}
+            <span className="text-[10px] font-bold">{t.label}</span>
+          </button>
+        ))}
       </div>
     </nav>
   );
@@ -2003,10 +2000,7 @@ function StaffScanner({ eventId, onNav }: { eventId: number; onNav: (s: PageStat
       <MobileBottomNav active="scanner" onNav={onNav} eventId={eventId} />
 
       <style>{`
-        @keyframes scan {
-          0%, 100% { transform: translateY(-100%); }
-          50% { transform: translateY(100%); }
-        }
+        @keyframes scan { 0%, 100% { transform: translateY(-100%); } 50% { transform: translateY(100%); } }
       `}</style>
     </div>
   );
@@ -2016,132 +2010,212 @@ function StaffScanner({ eventId, onNav }: { eventId: number; onNav: (s: PageStat
 function StaffHistory({ eventId, onNav }: { eventId: number; onNav: (s: PageState) => void }) {
   const event = EVENTS.find(e => e.id === eventId) || EVENTS[0];
   const [isOnline, setIsOnline] = useState(true);
-  const [filter, setFilter] = useState<"all" | "valid" | "duplicate" | "invalid">("all");
 
-  const mockHistory: ScannedTicket[] = [
-    { qrCode: "VT-A1B2C3", event: event.name, zone: "SVIP — A", holder: "Nguyễn Văn A", scannedAt: "19:45", synced: true, status: "valid" },
-    { qrCode: "VT-D4E5F6", event: event.name, zone: "VIP — B", holder: "Trần Thị B", scannedAt: "19:42", synced: true, status: "valid" },
-    { qrCode: "VT-G7H8I9", event: event.name, zone: "SVIP — A", holder: "Lê Văn C", scannedAt: "19:40", synced: false, status: "duplicate" },
-    { qrCode: "VT-J1K2L3", event: event.name, zone: "CAT 1A", holder: "Phạm Thị D", scannedAt: "19:38", synced: true, status: "valid" },
-    { qrCode: "VT-M4N5O6", event: event.name, zone: "FANZONE 1A", holder: "Hoàng Văn E", scannedAt: "19:35", synced: true, status: "valid" },
-    { qrCode: "VT-INVALID", event: "", zone: "", holder: "", scannedAt: "19:30", synced: true, status: "invalid" },
+  const allScanned: ScannedTicket[] = [
+    { qrCode: "VT-A1B2C3", event: event.name, zone: "SVIP — A",    holder: "Nguyễn Văn A",  scannedAt: "19:45", synced: true,  status: "valid" },
+    { qrCode: "VT-D4E5F6", event: event.name, zone: "VIP — B",     holder: "Trần Thị B",    scannedAt: "19:42", synced: true,  status: "valid" },
+    { qrCode: "VT-G7H8I9", event: event.name, zone: "SVIP — A",    holder: "Lê Văn C",      scannedAt: "19:40", synced: false, status: "duplicate" },
+    { qrCode: "VT-J1K2L3", event: event.name, zone: "CAT 1A",      holder: "Phạm Thị D",    scannedAt: "19:38", synced: true,  status: "valid" },
+    { qrCode: "VT-M4N5O6", event: event.name, zone: "FANZONE 1A",  holder: "Hoàng Văn E",   scannedAt: "19:35", synced: true,  status: "valid" },
+    { qrCode: "VT-P7Q8R9", event: event.name, zone: "CAT 2A",      holder: "Vũ Thị F",      scannedAt: "19:31", synced: true,  status: "valid" },
+    { qrCode: "VT-INVALID", event: "",         zone: "",             holder: "",               scannedAt: "19:30", synced: true,  status: "invalid" },
   ];
-
-  const filtered = filter === "all" ? mockHistory : mockHistory.filter(t => t.status === filter);
+  const totalTickets = 12847;
+  const validList = allScanned.filter(t => t.status === "valid");
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <MobileTopBar
-        title="Lịch sử quét"
-        onBack={() => onNav({ page: "staff-scanner", eventId })}
-        rightButton={
-          <button onClick={() => onNav({ page: "home" })} className="text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
-        }
-      />
+      <MobileTopBar title="Lịch sử quét" onBack={() => onNav({ page: "staff-scanner", eventId })} />
       <OfflineIndicator isOnline={isOnline} />
 
       <main className="flex-1 pb-20 overflow-auto">
         {/* Stats */}
-        <div className="p-4 bg-white border-b border-gray-200">
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center">
-              <p style={D} className="text-2xl font-black text-green-600">{mockHistory.filter(t => t.status === "valid").length}</p>
-              <p className="text-xs text-gray-600">Hợp lệ</p>
-            </div>
-            <div className="text-center">
-              <p style={D} className="text-2xl font-black text-orange-600">{mockHistory.filter(t => t.status === "duplicate").length}</p>
-              <p className="text-xs text-gray-600">Trùng</p>
-            </div>
-            <div className="text-center">
-              <p style={D} className="text-2xl font-black text-red-600">{mockHistory.filter(t => t.status === "invalid").length}</p>
-              <p className="text-xs text-gray-600">Lỗi</p>
-            </div>
+        <div className="grid grid-cols-2 bg-white border-b border-gray-200">
+          <div className="p-5 text-center border-r border-gray-200">
+            <p style={D} className="text-3xl font-black text-gray-900">{totalTickets.toLocaleString("vi-VN")}</p>
+            <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-medium">Tổng số vé</p>
           </div>
-
-          {/* Filter */}
-          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-            {[
-              { id: "all" as const, label: "Tất cả" },
-              { id: "valid" as const, label: "Hợp lệ" },
-              { id: "duplicate" as const, label: "Trùng" },
-              { id: "invalid" as const, label: "Lỗi" },
-            ].map(f => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`shrink-0 px-4 py-2 text-xs font-bold rounded-none transition-colors ${
-                  filter === f.id
-                    ? "bg-gray-900 text-white"
-                    : "bg-gray-100 text-gray-600"
-                }`}>
-                {f.label}
-              </button>
-            ))}
+          <div className="p-5 text-center">
+            <p style={D} className="text-3xl font-black text-green-600">{validList.length}</p>
+            <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-medium">Đã quét</p>
           </div>
         </div>
 
-        {/* History List */}
+        {/* Valid ticket list */}
         <div className="divide-y divide-gray-200">
-          {filtered.map((ticket, i) => (
-            <div key={i} className="bg-white p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-none flex items-center justify-center shrink-0 ${
-                  ticket.status === "valid" ? "bg-green-100" :
-                  ticket.status === "duplicate" ? "bg-orange-100" :
-                  "bg-red-100"
-                }`}>
-                  {ticket.status === "valid" ? (
-                    <CheckCircle size={20} className="text-green-600" />
-                  ) : ticket.status === "duplicate" ? (
-                    <AlertCircle size={20} className="text-orange-600" />
-                  ) : (
-                    <XCircle size={20} className="text-red-600" />
-                  )}
+          {validList.map((ticket, i) => (
+            <div key={i} className="bg-white px-4 py-3 flex items-center gap-3">
+              <div className="w-9 h-9 bg-green-50 border border-green-100 flex items-center justify-center shrink-0">
+                <CheckCircle size={18} className="text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{ticket.holder}</p>
+                  <p className="text-xs text-gray-400 shrink-0">{ticket.scannedAt}</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="font-mono text-sm font-bold text-gray-900">{ticket.qrCode}</p>
-                    <p className="text-xs text-gray-500 shrink-0">{ticket.scannedAt}</p>
-                  </div>
-                  {ticket.status !== "invalid" ? (
-                    <>
-                      <p className="text-sm text-gray-900 mb-0.5">{ticket.holder}</p>
-                      <p className="text-xs text-gray-600">{ticket.zone} · {ticket.event}</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-red-600">Mã QR không hợp lệ</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${
-                      ticket.status === "valid" ? "bg-green-100 text-green-700" :
-                      ticket.status === "duplicate" ? "bg-orange-100 text-orange-700" :
-                      "bg-red-100 text-red-700"
-                    }`}>
-                      {ticket.status === "valid" ? "✓ Hợp lệ" : ticket.status === "duplicate" ? "⚠ Trùng" : "✕ Lỗi"}
-                    </span>
-                    {!ticket.synced && (
-                      <span className="inline-block text-xs font-bold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
-                        ⏳ Chưa sync
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <p className="text-xs text-gray-500 mt-0.5">{ticket.zone}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[10px] font-mono text-gray-400">{ticket.qrCode}</p>
+                {!ticket.synced && (
+                  <span className="text-[9px] font-bold text-orange-500 uppercase">Chưa sync</span>
+                )}
               </div>
             </div>
           ))}
         </div>
 
-        {filtered.length === 0 && (
+        {validList.length === 0 && (
           <div className="p-12 text-center">
-            <History size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">Chưa có vé nào</p>
+            <History size={44} className="mx-auto text-gray-200 mb-3" />
+            <p className="text-sm text-gray-400">Chưa có vé nào được quét</p>
           </div>
         )}
       </main>
 
       <MobileBottomNav active="history" onNav={onNav} eventId={eventId} />
+    </div>
+  );
+}
+
+// Staff Settings Screen
+function StaffSettings({ eventId, onNav }: { eventId: number; onNav: (s: PageState) => void }) {
+  const [name, setName] = useState("Staff Soát Vé");
+  const [showPwSection, setShowPwSection] = useState(false);
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showCur, setShowCur] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
+  const [pwSaved, setPwSaved] = useState(false);
+
+  function handleSaveName(e: React.FormEvent) {
+    e.preventDefault();
+    setNameSaved(true);
+    setTimeout(() => setNameSaved(false), 2000);
+  }
+
+  function handleSavePw(e: React.FormEvent) {
+    e.preventDefault();
+    setPwSaved(true);
+    setCurPw(""); setNewPw(""); setConfirmPw("");
+    setTimeout(() => { setPwSaved(false); setShowPwSection(false); }, 1800);
+  }
+
+  const initials = name.trim().split(" ").slice(-1)[0]?.[0]?.toUpperCase() ?? "S";
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <MobileTopBar title="Cài đặt" />
+
+      <main className="flex-1 pb-24 overflow-auto">
+        {/* Profile header */}
+        <div className="bg-white border-b border-gray-200 px-5 py-6 flex items-center gap-4">
+          <div className="w-16 h-16 bg-gray-900 flex items-center justify-center shrink-0">
+            <span style={D} className="text-2xl font-black text-white">{initials}</span>
+          </div>
+          <div>
+            <p style={D} className="text-xl font-black uppercase italic text-gray-900 leading-tight">{name}</p>
+            <p className="text-xs text-gray-500 mt-1">staff@viticket.vn</p>
+            <span className="inline-block text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-blue-50 text-blue-700 mt-1.5">STAFF</span>
+          </div>
+        </div>
+
+        {/* Name form */}
+        <div className="bg-white border-b border-gray-200 px-5 py-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-4">Thông tin cá nhân</p>
+          <form onSubmit={handleSaveName}>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Họ và tên</label>
+            <input value={name} onChange={e => setName(e.target.value)}
+              className="w-full border border-gray-200 bg-gray-50 text-sm px-4 py-3 outline-none focus:border-gray-400 focus:bg-white transition-colors mb-4" />
+            <button type="submit"
+              className={`w-full text-sm font-black uppercase tracking-wider py-3 transition-colors ${nameSaved ? "bg-green-600 text-white" : "bg-gray-900 text-white hover:bg-gray-700"}`}>
+              {nameSaved ? "✓ Đã lưu" : "Lưu thông tin"}
+            </button>
+          </form>
+        </div>
+
+        {/* Password section */}
+        <div className="bg-white border-b border-gray-200 px-5 py-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">Mật khẩu</p>
+            {!showPwSection && (
+              <button onClick={() => setShowPwSection(true)}
+                className="text-xs font-bold text-gray-900 border border-gray-200 px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                Đổi mật khẩu
+              </button>
+            )}
+          </div>
+
+          {showPwSection && (
+            pwSaved ? (
+              <div className="py-6 text-center">
+                <div className="w-10 h-10 bg-green-50 border border-green-200 flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle size={20} className="text-green-600" />
+                </div>
+                <p className="text-sm font-bold text-gray-900">Đổi mật khẩu thành công</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSavePw} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mật khẩu hiện tại</label>
+                  <div className="relative">
+                    <input type={showCur ? "text" : "password"} value={curPw} onChange={e => setCurPw(e.target.value)} required
+                      className="w-full border border-gray-200 bg-gray-50 text-sm px-4 pr-10 py-3 outline-none focus:border-gray-400 focus:bg-white transition-colors" />
+                    <button type="button" onClick={() => setShowCur(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      {showCur ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Mật khẩu mới</label>
+                  <div className="relative">
+                    <input type={showNew ? "text" : "password"} value={newPw} onChange={e => setNewPw(e.target.value)} required minLength={8}
+                      className="w-full border border-gray-200 bg-gray-50 text-sm px-4 pr-10 py-3 outline-none focus:border-gray-400 focus:bg-white transition-colors" />
+                    <button type="button" onClick={() => setShowNew(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Xác nhận mật khẩu mới</label>
+                  <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} required
+                    className="w-full border border-gray-200 bg-gray-50 text-sm px-4 py-3 outline-none focus:border-gray-400 focus:bg-white transition-colors" />
+                  {confirmPw && newPw !== confirmPw && <p className="text-xs text-red-500 mt-1">Mật khẩu không khớp</p>}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setShowPwSection(false)}
+                    className="flex-1 border border-gray-200 text-sm font-semibold py-3 text-gray-600 hover:bg-gray-50 transition-colors">
+                    Hủy
+                  </button>
+                  <button type="submit" disabled={!curPw || newPw !== confirmPw || !newPw}
+                    className="flex-1 bg-gray-900 text-white text-sm font-black uppercase tracking-wider py-3 hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    Cập nhật
+                  </button>
+                </div>
+              </form>
+            )
+          )}
+          {!showPwSection && (
+            <p className="text-xs text-gray-400">Thay đổi mật khẩu đăng nhập của bạn</p>
+          )}
+        </div>
+
+        {/* Change event + Sign out */}
+        <div className="px-5 py-5 flex flex-col gap-3">
+          <button onClick={() => onNav({ page: "staff-event-select" })}
+            className="w-full border border-gray-200 bg-white text-sm font-bold text-gray-700 py-3 flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+            <RefreshCw size={15} /> Đổi sự kiện soát vé
+          </button>
+          <button onClick={() => onNav({ page: "staff-login" })}
+            className="w-full border border-gray-200 bg-white text-sm font-bold text-gray-700 py-3 flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+            <LogOut size={15} /> Đăng xuất
+          </button>
+        </div>
+      </main>
+
+      <MobileBottomNav active="settings" onNav={onNav} eventId={eventId} />
     </div>
   );
 }
@@ -3654,6 +3728,7 @@ export default function App() {
         {page.page === "staff-sync"         && <StaffSync eventId={page.eventId} onNav={nav} />}
         {page.page === "staff-scanner"      && <StaffScanner eventId={page.eventId} onNav={nav} />}
         {page.page === "staff-history"      && <StaffHistory eventId={page.eventId} onNav={nav} />}
+        {page.page === "staff-settings"     && <StaffSettings eventId={page.eventId} onNav={nav} />}
       </main>
 
       <style>{`

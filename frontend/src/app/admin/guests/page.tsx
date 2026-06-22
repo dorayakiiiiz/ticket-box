@@ -1,5 +1,5 @@
 'use client';
-import { Upload } from 'lucide-react';
+import { Upload, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
 
@@ -30,8 +30,16 @@ export default function AdminGuestsPage() {
 
       {/* Guests Table */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
+        <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 style={D} className="text-xl font-black uppercase italic text-gray-900">Danh sách khách mời</h2>
+          <div className="relative w-full md:w-80">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên, email, SĐT..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 text-sm focus:outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 bg-white"
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -68,6 +76,22 @@ export default function AdminGuestsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Pagination UI */}
+      <div className="mt-6 flex items-center justify-between">
+        <p className="text-sm text-gray-500">Hiển thị <span className="font-semibold text-gray-900">1</span> đến <span className="font-semibold text-gray-900">3</span> trong số <span className="font-semibold text-gray-900">3</span> khách mời</p>
+        <div className="flex gap-1">
+          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed">
+            <ChevronLeft size={16} />
+          </button>
+          <button className="flex items-center justify-center w-8 h-8 border border-gray-900 bg-gray-900 text-white text-sm font-medium">
+            1
+          </button>
+          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors cursor-not-allowed">
+            <ChevronRight size={16} />
+          </button>
         </div>
       </div>
     </div>
