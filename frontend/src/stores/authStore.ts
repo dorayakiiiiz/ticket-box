@@ -8,6 +8,7 @@ interface User {
   role: string;
   phone?: string;
   avatarUrl?: string;
+  hasPassword?: boolean; // false nếu đăng nhập bằng Google OAuth
 }
 
 interface AuthState {
@@ -19,6 +20,8 @@ interface AuthState {
   initialize: () => void;
   openAuthModal: () => void;
   closeAuthModal: () => void;
+  // Cập nhật một phần thông tin user mà không cần re-login
+  updateUser: (partial: Partial<User>) => void;
   isInitialized: boolean;
 }
 
@@ -32,10 +35,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   closeAuthModal: () => set({ isAuthModalOpen: false }),
 
   login: (user) => {
-    // Chỉ lưu thông tin user (để render UI) vào cookie thường.
-    // Còn Token đã được Backend nhét vào httpOnly cookie tự động.
     Cookies.set('user', JSON.stringify(user), { expires: 7, path: '/' });
     set({ user, isAuthenticated: true });
+  },
+
+  // Merge partial update vào state + đồng bộ lại cookie
+  updateUser: (partial) => {
+    const current = useAuthStore.getState().user;
+    if (!current) return;
+    const updated = { ...current, ...partial };
+    Cookies.set('user', JSON.stringify(updated), { expires: 7, path: '/' });
+    set({ user: updated });
   },
 
   logout: () => {

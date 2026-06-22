@@ -75,7 +75,7 @@ export default function AdminAIBioPage() {
 
   // Load concerts
   useEffect(() => {
-    adminService.getConcerts().then(setConcerts).catch(() => {});
+    adminService.getConcerts().then(res => setConcerts(res.data)).catch(() => {});
   }, []);
 
   // ─── File selection với client-side validation ─────────────────────────────
@@ -187,8 +187,8 @@ export default function AdminAIBioPage() {
       setDescriptionResult('');
       setFile(null);
       // Refresh concert list
-      const data = await adminService.getConcerts();
-      setConcerts(data);
+      const res = await adminService.getConcerts();
+      setConcerts(res.data);
     } catch (err) {
       setError(extractError(err, 'Reset thất bại.'));
     } finally {
