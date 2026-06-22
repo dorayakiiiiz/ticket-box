@@ -27,7 +27,7 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [agreed, setAgreed] = useState(false);
-  
+
   const [paymentState, setPaymentState] = useState<'idle' | 'processing'>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -156,17 +156,17 @@ export default function CheckoutPage() {
             <h2 style={D} className="text-2xl font-black uppercase italic mb-4">Phương thức thanh toán</h2>
             <div className="flex flex-col gap-3 mb-8">
               {[
-                { id: "momo" as const, label: "MoMo", sub: "Ví điện tử MoMo", dot: "#D82D8B" },
-                { id: "vnpay" as const, label: "VNPAY", sub: "QR Code & Thẻ ngân hàng", dot: "#E31837" },
-                { id: "card" as const, label: "Thẻ quốc tế", sub: "Visa, Mastercard, JCB", dot: "#1A56DB" },
+                { id: "momo" as const, label: "MoMo", sub: "Ví điện tử MoMo", img: "https://developers.momo.vn/v3/assets/images/MOMO-Logo-App-6262c3743a290ef02396a24ea2b66c35.png" },
+                { id: "vnpay" as const, label: "VNPAY", sub: "QR Code & Thẻ ngân hàng", img: "https://cdn.haitrieu.com/wp-content/uploads/2022/10/Icon-VNPAY-QR.png" },
+                { id: "card" as const, label: "Thẻ quốc tế", sub: "Visa, Mastercard, JCB", img: "https://images.icon-icons.com/2341/PNG/512/mastercard_payment_method_card_icon_142734.png" },
               ].map(p => (
                 <button key={p.id} onClick={() => setPay(p.id)}
                   className={`flex items-center gap-4 p-4 border-2 transition-all text-left bg-transparent ${pay === p.id ? "border-[#CCFF00]" : "border-[#333] hover:border-[#333]/80"}`}>
                   <div className="w-4 h-4 border-2 flex items-center justify-center shrink-0" style={{ borderColor: pay === p.id ? "#CCFF00" : "rgba(255,255,255,0.15)" }}>
                     {pay === p.id && <div className="w-2 h-2 bg-[#CCFF00]" />}
                   </div>
-                  <div className="w-8 h-8 flex items-center justify-center shrink-0" style={{ backgroundColor: p.dot + "20" }}>
-                    <div className="w-3 h-3" style={{ backgroundColor: p.dot }} />
+                  <div className="w-8 flex items-center justify-center shrink-0">
+                    <img className="w-8 h-full object-contain" src={p.img} alt={p.label} />
                   </div>
                   <div><div className="text-sm md:text-base font-bold text-white">{p.label}</div><div className="text-[11px] md:text-xs text-gray-500">{p.sub}</div></div>
                 </button>
