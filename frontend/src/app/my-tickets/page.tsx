@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Ticket, Download, Loader2 } from "lucide-react";
 import { QRCodeSVG } from 'qrcode.react';
+import { toPng } from 'html-to-image';
 import { ticketService, MyTicketOrder } from "../../services/ticketService";
 import Navbar from "../../components/layout/Navbar";
 
@@ -18,6 +19,7 @@ function getColorForZone(zone: string) {
 }
 
 function TicketCard({ order, ticket }: { order: MyTicketOrder; ticket: MyTicketOrder["tickets"][0] }) {
+  const [isDownloading, setIsDownloading] = useState(false);
   const isUsed = ticket.status === "USED" || ticket.status === "CHECKED_IN";
   const color = getColorForZone(order.ticketType.name);
   const accentText = color === "#CCFF00" ? "#000" : "#fff";
@@ -32,15 +34,44 @@ function TicketCard({ order, ticket }: { order: MyTicketOrder; ticket: MyTicketO
     }
   } catch (e) { }
 
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      const element = document.getElementById(`ticket-${ticket.id}`);
+      if (!element) return;
+      
+      const dataUrl = await toPng(element, {
+        pixelRatio: 2,
+        backgroundColor: '#000000',
+        filter: (node) => {
+          if (node instanceof HTMLElement) {
+            if (node.id === `download-btn-${ticket.id}`) return false;
+            if (node.id === `status-tag-${ticket.id}`) return false;
+          }
+          return true;
+        }
+      });
+      
+      const link = document.createElement('a');
+      link.download = `TicketZ-${order.concert.name.replace(/\s+/g, '-')}-${ticket.id.substring(0, 8)}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (e) {
+      console.error('Lỗi tải ảnh:', e);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
-    <div className={`relative border overflow-hidden transition-all group ${isUsed ? "border-[#333] opacity-60" : "border-[#333] hover:border-[#CCFF00]/40"}`}>
+    <div id={`ticket-${ticket.id}`} className={`relative border overflow-hidden transition-all group ${isUsed ? "border-[#333] opacity-60" : "border-[#333] hover:border-[#CCFF00]/40"}`}>
       {/* Left color stripe */}
       <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: color }} />
       <div className="flex items-stretch ml-1 mr-2">
         {/* Main body */}
         <div className="flex-1 p-5 bg-[#111] min-w-0">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] px-2 py-0.5"
+            <span id={`status-tag-${ticket.id}`} className="text-[9px] font-black uppercase tracking-[0.2em] px-2 py-0.5"
               style={!isUsed ? { backgroundColor: color, color: accentText } : { backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.25)" }}>
               {isUsed ? "ĐÃ SỬ DỤNG" : "SẮP DIỄN RA"}
             </span>
@@ -72,9 +103,14 @@ function TicketCard({ order, ticket }: { order: MyTicketOrder; ticket: MyTicketO
             </div>
             <div className="ml-auto flex items-center gap-2">
               {!isUsed && (
-                <button className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-colors hover:opacity-80"
+                <button 
+                  id={`download-btn-${ticket.id}`}
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                  className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: color, color: accentText }}>
-                  <Download size={11} /> PDF
+                  {isDownloading ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />} 
+                  {isDownloading ? "ĐANG TẢI..." : "TẢI ẢNH"}
                 </button>
               )}
             </div>

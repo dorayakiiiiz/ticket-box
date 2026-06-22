@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.106.2",
     "@types/js-cookie": "^3.0.6",
     "axios": "^1.16.1",
+    "html-to-image": "^1.11.13",
     "js-cookie": "^3.0.7",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
