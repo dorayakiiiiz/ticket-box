@@ -9,23 +9,9 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.response.use(
-  (response) => {
-    // Auto-extract response envelope { success, data } — transparent cho các service call
-    // BE bọc tất cả response thành { success: true, data: ... } qua TransformInterceptor
-    // FE tự unwrap ở đây → res.data trong các service vẫn là payload thật, không cần đổi
-    const envelope = response.data;
-    if (
-      envelope &&
-      typeof envelope === 'object' &&
-      'success' in envelope &&
-      'data' in envelope
-    ) {
-      return { ...response, data: envelope.data };
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // Xử lý lỗi chung: Token hết hạn → logout
+    // Xử lý lỗi chung (VD: Token hết hạn -> Xóa token)
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
     }
