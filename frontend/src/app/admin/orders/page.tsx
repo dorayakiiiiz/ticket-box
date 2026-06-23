@@ -1,6 +1,7 @@
 'use client';
-import { useState, useMemo } from 'react';
-import { Eye, Search, X, Ticket, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Eye, Search, X, Ticket, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { adminService } from '@/services/adminService';
 
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
 function fmt(n: number) { return n.toLocaleString('vi-VN'); }
@@ -14,41 +15,58 @@ type OrderData = {
   zone: string;
   qty: number;
   total: number;
-  status: 'PAID' | 'PENDING' | 'CANCELLED';
+  status: 'PAID' | 'PENDING' | 'CANCELLED' | 'FAILED';
   tickets: { code: string; checkIn: string | null }[];
 };
-
-const ORDERS: OrderData[] = [
-  { id: 'ORD-001', date: '2026-06-01', event: 'ANH TRAI SAY HI', user: 'Nguyễn Văn A', email: 'a.nguyen@gmail.com', zone: 'SVIP — A', qty: 2, total: 10000000, status: 'PAID', tickets: [{ code: 'VT-A1B2C3', checkIn: null }, { code: 'VT-D4E5F6', checkIn: '18:32' }] },
-  { id: 'ORD-002', date: '2026-06-02', event: 'RAP VIỆT ALL-STARS', user: 'Trần Thị B', email: 'b.tran@gmail.com', zone: 'VIP — A', qty: 4, total: 16000000, status: 'PAID', tickets: [{ code: 'VT-G7H8I9', checkIn: null }, { code: 'VT-J0K1L2', checkIn: '19:15' }] },
-  { id: 'ORD-003', date: '2026-06-03', event: 'BINZ × TOULIVER', user: 'Lê Văn C', email: 'c.le@gmail.com', zone: 'CAT 1A', qty: 3, total: 4500000, status: 'PENDING', tickets: [] },
-  { id: 'ORD-004', date: '2026-06-04', event: 'MỸ TÂM TOUR 2026', user: 'Phạm Thị D', email: 'd.pham@gmail.com', zone: 'SKY LOUNGE', qty: 1, total: 8000000, status: 'PAID', tickets: [{ code: 'VT-P6Q7R8', checkIn: '19:45' }] },
-  { id: 'ORD-005', date: '2026-06-05', event: 'AFTERPARTY FESTIVAL', user: 'Hoàng Văn E', email: 'e.hoang@gmail.com', zone: 'FANZONE 1A', qty: 2, total: 2400000, status: 'CANCELLED', tickets: [] },
-  { id: 'ORD-006', date: '2026-06-06', event: 'ĐEN VÂU — TRỜI ƠI!', user: 'Vũ Thị F', email: 'f.vu@gmail.com', zone: 'CAT 2A', qty: 2, total: 2400000, status: 'PAID', tickets: [{ code: 'VT-M9N0O1', checkIn: null }, { code: 'VT-P2Q3R4', checkIn: null }] },
-  { id: 'ORD-007', date: '2026-06-07', event: 'MONO — WINTER', user: 'Bùi Văn G', email: 'g.bui@gmail.com', zone: 'VIP — B', qty: 1, total: 4000000, status: 'PENDING', tickets: [] },
-];
 
 const BADGE: Record<string, string> = {
   PAID: 'bg-green-100 text-green-700',
   PENDING: 'bg-yellow-100 text-yellow-700',
   CANCELLED: 'bg-red-100 text-red-700',
+  FAILED: 'bg-gray-100 text-gray-700',
 };
 
 export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null);
 
-  const filtered = useMemo(() => {
-    return ORDERS.filter(o => {
-      const matchStatus = statusFilter === 'ALL' || o.status === statusFilter;
-      const q = searchQuery.toLowerCase();
-      const matchSearch = o.id.toLowerCase().includes(q) ||
-        o.user.toLowerCase().includes(q) ||
-        o.email.toLowerCase().includes(q);
-      return matchStatus && matchSearch;
-    });
-  }, [statusFilter, searchQuery]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [meta, setMeta] = useState({ total: 0, totalPages: 1, limit: 10 });
+
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // Reset page on search
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Reset page when status filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await adminService.getOrders(currentPage, meta.limit, statusFilter, debouncedSearch);
+      setOrders(res.data);
+      setMeta(res.meta);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, statusFilter, debouncedSearch, meta.limit]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   return (
     <div className="p-8">
@@ -83,7 +101,13 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Orders Table */}
-      <div className="bg-white border border-gray-200 overflow-hidden">
+      <div className="bg-white border border-gray-200 overflow-hidden relative min-h-[400px]">
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 z-10 flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 text-gray-400 animate-spin mb-2" />
+            <p className="text-sm font-semibold text-gray-500">Đang tải dữ liệu...</p>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -98,14 +122,14 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filtered.length === 0 ? (
+              {!loading && orders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     Không tìm thấy đơn hàng nào phù hợp.
                   </td>
                 </tr>
               ) : (
-                filtered.map(order => (
+                orders.map(order => (
                   <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <p className="text-sm font-mono font-bold text-gray-900">{order.id}</p>
@@ -128,7 +152,7 @@ export default function AdminOrdersPage() {
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => setSelectedOrder(order)}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 transition-colors"
+                        className="inline-flex items-center justify-center whitespace-nowrap gap-1.5 text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 transition-colors"
                       >
                         <Eye size={14} /> Chi tiết
                       </button>
@@ -142,23 +166,44 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Pagination UI */}
-      <div className="mt-6 flex items-center justify-between">
-        <p className="text-sm text-gray-500">Hiển thị <span className="font-semibold text-gray-900">1</span> đến <span className="font-semibold text-gray-900">7</span> trong số <span className="font-semibold text-gray-900">12</span> đơn hàng</p>
-        <div className="flex gap-1">
-          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed">
-            <ChevronLeft size={16} />
-          </button>
-          <button className="flex items-center justify-center w-8 h-8 border border-gray-900 bg-gray-900 text-white text-sm font-medium">
-            1
-          </button>
-          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors">
-            2
-          </button>
-          <button className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors">
-            <ChevronRight size={16} />
-          </button>
+      {meta.totalPages > 0 && (
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Hiển thị <span className="font-semibold text-gray-900">{(currentPage - 1) * meta.limit + 1}</span> đến <span className="font-semibold text-gray-900">{Math.min(currentPage * meta.limit, meta.total)}</span> trong số <span className="font-semibold text-gray-900">{meta.total}</span> đơn hàng
+          </p>
+          <div className="flex gap-1">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            
+            {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setCurrentPage(p)}
+                className={`flex items-center justify-center w-8 h-8 border text-sm font-medium transition-colors ${
+                  p === currentPage
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(meta.totalPages, p + 1))}
+              disabled={currentPage >= meta.totalPages}
+              className="flex items-center justify-center w-8 h-8 border border-gray-200 text-gray-600 bg-white hover:bg-gray-50 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Order Detail Modal */}
       {selectedOrder && (

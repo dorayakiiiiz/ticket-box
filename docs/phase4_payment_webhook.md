@@ -93,26 +93,47 @@ try {
 ## 5. Breakdown Task Siêu Nhỏ (Dành để thực thi)
 
 ### [Backend] VNPAY Service & Gen URL
-- [ ] B1: Đăng ký tài khoản VNPAY Sandbox, lấy `vnp_TmnCode` và `vnp_HashSecret` bỏ vào `.env`.
-- [ ] B2: Viết hàm tạo URL chuyển hướng VNPAY (Sorting các params theo quy tắc của VNPAY, hash SHA512).
-- [ ] B3: Viết API GET `/orders/:id/payment-url`. Cài đặt thư viện `opossum`. Bọc hàm Gen URL trên vào Circuit Breaker để bảo vệ hệ thống.
+- [x] B1: Đăng ký tài khoản VNPAY Sandbox, lấy `vnp_TmnCode` và `vnp_HashSecret` bỏ vào `.env`.
+- [x] B2: Viết hàm tạo URL chuyển hướng VNPAY (Sorting các params theo quy tắc của VNPAY, hash SHA512).
+- [x] B3: Viết API GET `/orders/:id/payment-url`. Cài đặt thư viện `opossum`. Bọc hàm Gen URL trên vào Circuit Breaker để bảo vệ hệ thống.
 
 ### [Backend] Xử lý Webhook (IPN) & Tạo Mã QR
-- [ ] B1: Viết API GET (hoặc POST tùy VNPAY quy định) `/payment/webhook`.
-- [ ] B2: Viết hàm Validate Checksum/Signature. Sắp xếp lại params nhận được trừ đi `vnp_SecureHash`, hash lại bằng Secret Key xem có khớp không. Nếu sai ném lỗi.
-- [ ] B3: Nếu hợp lệ và giao dịch thành công (Mã `00`), update `Order.status = PAID`.
-- [ ] B4: Viết vòng lặp qua các `Ticket` của `Order` đó. Dùng thư viện sinh ngẫu nhiên 1 chuỗi string dài (VD: JWT hoặc UUID). Update vào cột `qr_code_payload`. (Lưu ý: Không lưu hình ảnh QR vào DB, chỉ lưu chuỗi text, frontend sẽ tự vẽ hình ảnh QR code dựa trên chuỗi này).
-- [ ] B5: Trả về chuẩn format mà VNPAY yêu cầu: `{ "RspCode": "00", "Message": "Confirm Success" }`.
+- [x] B1: Viết API GET (hoặc POST tùy VNPAY quy định) `/payment/webhook` (thực tế là `/payment/vnpay-ipn`).
+- [x] B2: Viết hàm Validate Checksum/Signature. Sắp xếp lại params nhận được trừ đi `vnp_SecureHash`, hash lại bằng Secret Key xem có khớp không. Nếu sai ném lỗi.
+- [x] B3: Nếu hợp lệ và giao dịch thành công (Mã `00`), update `Order.status = PAID`.
+- [x] B4: Viết vòng lặp qua các `Ticket` của `Order` đó. Dùng thư viện sinh ngẫu nhiên 1 chuỗi string dài (VD: JWT hoặc UUID). Update vào cột `qr_code_payload` (thực tế là `qrCode`).
+- [x] B5: Trả về chuẩn format mà VNPAY yêu cầu: `{ "RspCode": "00", "Message": "Confirm Success" }`.
 
 ### [Backend] Cronjob Hủy Đơn Treo
-- [ ] B1: Cài đặt `@nestjs/schedule`. Kích hoạt `ScheduleModule.forRoot()`.
-- [ ] B2: Viết hàm chạy cronjob `@Cron(CronExpression.EVERY_5_MINUTES)`.
-- [ ] B3: Dùng TypeORM query các Order có trạng thái `PENDING` và `created_at` cách đây quá 15 phút.
-- [ ] B4: Dùng vòng lặp (hoặc transaction) đổi status thành `CANCELLED`.
-- [ ] B5: Gọi `RedisService` để cộng lại số vé tương ứng vào `ticket_type:{id}:available` và trừ số lượng tại `user:{id}:tickets_held`.
+- [x] B1: Cài đặt `@nestjs/schedule`. Kích hoạt `ScheduleModule.forRoot()` trong `app.module.ts`.
+- [x] B2: Viết hàm chạy cronjob `@Cron(CronExpression.EVERY_5_MINUTES)` trong `CronService`.
+- [x] B3: Dùng TypeORM query các Order có trạng thái `PENDING` và `created_at` cách đây quá 15 phút.
+- [x] B4: Dùng vòng lặp (hoặc transaction) đổi status thành `CANCELLED`.
+- [x] B5: Gọi `RedisService` để cộng lại số vé tương ứng vào `ticket_type:{id}:available` và trừ số lượng tại `user:{id}:tickets_held`.
 
 ### [Frontend] Màn Hình Trạng Thái Đơn Hàng & Vé Của Tôi
-- [ ] B1: Ở trang chờ thanh toán, gọi API lấy Payment URL và chuyển hướng người dùng sang VNPAY.
-- [ ] B2: Dựng trang `/payment/return` (Trang VNPAY redirect về sau khi thanh toán). Đọc param trên URL, báo "Thanh toán thành công" hoặc "Thất bại".
-- [ ] B3: Dựng trang "Vé của tôi" (`/my-tickets`). Gọi API lấy danh sách Ticket đã mua.
-- [ ] B4: Cài đặt thư viện `qrcode.react` (hoặc tương tự) để render QR Code trên màn hình dựa vào trường `qr_code_payload` lấy từ backend.
+- [x] B1: Ở trang chờ thanh toán, gọi API lấy Payment URL và chuyển hướng người dùng sang VNPAY.
+- [x] B2: Dựng trang `/payment/return` (`/checkout/success`). Đọc param trên URL, báo "Thanh toán thành công" hoặc "Thất bại".
+- [x] B3: Dựng trang "Vé của tôi" (`/my-tickets`). Gọi API `/tickets/my-tickets` lấy danh sách Ticket đã mua.
+- [x] B4: Load QR Code trên màn hình dựa vào trường `qrCode` lấy từ backend (Đã xử lý bằng cách lấy ảnh từ API `qrserver.com`).
+
+## 6. Ghi chú Quan trọng từ Quá trình Triển khai (Lessons Learned)
+
+Trong quá trình triển khai Phase 4, đã có những điều chỉnh kiến trúc và sửa lỗi quan trọng cần lưu ý cho người bảo trì tiếp theo:
+
+**1. Lỗi Postgres `FOR UPDATE cannot be applied to the nullable side of an outer join`**
+- Ban đầu, hàm xử lý Webhook (`PaymentService.processWebhookSuccess`) dùng `findOne` kèm theo `relations: { ticketType: true, user: true }` và `lock: { mode: 'pessimistic_write' }`. 
+- Hành động này sinh ra `LEFT JOIN` trong SQL và bị Postgres chặn lại khi cố gắng gán `FOR UPDATE`.
+- **Cách khắc phục:** Đã tách ra làm 2 bước query. Bước 1 chỉ query trực tiếp trên bảng `Order` kèm lock `pessimistic_write`. Sau khi khóa thành công, dùng một query `findOneOrFail` khác (không lock) để nạp thêm thông tin `relations`.
+
+**2. Lỗi nhân đôi Ticket (Double-ticketing Bug)**
+- Ban đầu, file `order.processor.ts` (BullMQ worker xử lý lúc bấm đặt vé) có logic tạo `Ticket` trạng thái `VALID` cho đơn hàng đang `PENDING`. Khi thanh toán thành công, webhook lại tạo vé thêm 1 lần nữa khiến số lượng vé nhân đôi.
+- **Cách khắc phục:** Đã **xóa bỏ logic tạo vé trong `OrderProcessor`**. Việc cấp phát vé (Ticket entity) giờ đây 100% chỉ diễn ra ở bước thanh toán thành công (`PaymentService.processWebhookSuccess`).
+
+**3. VNPAY Webhook Signature Mismatch do Facebook Crawler/Empty Params**
+- Khi test, nhận thấy có những request gửi đến Webhook không có query parameters (ví dụ do Facebook Crawler crawl `?fbclid=...`). Việc băm HashSecret với các giá trị rỗng/undefined gây ra sai lệch chữ ký và sập server khi logging các biến chưa định nghĩa.
+- **Cách khắc phục:** Đã chỉnh sửa `vnpay.strategy.ts` để tự động lọc bỏ các keys có value là `undefined`, `null` hoặc chuỗi rỗng (`''`) trước khi sort và tạo chữ ký. 
+
+**4. Lỗi đường dẫn (Path) với Lua Script của Redis trong môi trường Build**
+- File `sample.ts` biên dịch thông qua `tsc` sinh ra thư mục `dist/src/...` làm sai lệch biến `__dirname` khi đọc file Lua.
+- **Cách khắc phục:** Đã sửa lại thư mục copy resources tĩnh trong `nest-cli.json` và update cách `redis.service.ts` đọc file Lua tương đối linh hoạt hơn.

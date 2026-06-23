@@ -30,6 +30,11 @@ export async function getConcertDetail(id: string): Promise<Concert | null> {
   }
 }
 
+export type PaginatedConcerts = {
+  data: Concert[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+};
+
 export const concertService = {
   // Real API — used by main pages
   getAll: async (): Promise<Concert[]> => {
@@ -42,7 +47,17 @@ export const concertService = {
     return res.data;
   },
 
-
+  searchConcerts: async (page = 1, limit = 12, search = '', status = '', city = ''): Promise<PaginatedConcerts> => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(search ? { search } : {}),
+      ...(status ? { status } : {}),
+      ...(city ? { city } : {}),
+    });
+    const res = await apiClient.get(`/concerts?${params}`);
+    return res.data;
+  },
 };
 
 // SWR fetcher cho availability endpoint — dùng apiClient (tự attach auth header)

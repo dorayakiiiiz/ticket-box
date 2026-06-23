@@ -104,7 +104,10 @@ export class ConcertService implements OnApplicationBootstrap {
       .skip((page - 1) * limit);
 
     if (search) {
-      qb.andWhere('concert.name ILIKE :search', { search: `%${search}%` });
+      qb.andWhere(
+        '(concert.name ILIKE :search OR concert.city ILIKE :search OR concert.venue ILIKE :search OR concert.subtitle ILIKE :search)',
+        { search: `%${search}%` },
+      );
     }
 
     // Lọc theo trạng thái — khớp chính xác enum
