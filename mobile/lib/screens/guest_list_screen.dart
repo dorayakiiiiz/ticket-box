@@ -254,7 +254,7 @@ class _GuestListScreenState extends State<GuestListScreen> {
       return;
     }
 
-    // ✅ Gọi API check-in qua provider
+
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
 
     // Hiển thị loading

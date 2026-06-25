@@ -1,3 +1,4 @@
+// backend/src/ticket/ticket.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -36,7 +37,7 @@ export class TicketService {
       id: ticket.id,
       qrPayload: ticket.qrCode,
       status: ticket.status,
-      updatedAt: ticket.updatedAt,
+      updatedAt: ticket.updatedAt, 
     }));
   }
 
@@ -79,6 +80,7 @@ export class TicketService {
           id: t.id,
           qrCode: t.qrCode,
           status: t.status,
+          updatedAt: t.updatedAt, // ✅ Thêm updatedAt
         })),
       };
     });
@@ -105,6 +107,7 @@ export class TicketService {
 
     // Cập nhật trạng thái vé thành đã sử dụng
     ticket.status = TicketStatus.USED;
+    ticket.updatedAt = new Date(); 
     await this.ticketRepo.save(ticket);
 
     return {
@@ -114,6 +117,7 @@ export class TicketService {
         concertName: ticket.order.concert.name,
         ticketType: ticket.order.ticketType.name,
         usedAt: new Date(),
+        updatedAt: ticket.updatedAt, 
       },
     };
   }
@@ -139,6 +143,7 @@ export class TicketService {
 
     // Cập nhật trạng thái
     ticket.status = TicketStatus.USED;
+    ticket.updatedAt = new Date(); 
     await this.ticketRepo.save(ticket);
 
     return {
@@ -146,34 +151,37 @@ export class TicketService {
       message: 'Quét vé thành công!',
       checkedInAt: scannedAt || new Date().toISOString(),
       ticketId: ticket.id,
+      updatedAt: ticket.updatedAt, // ✅ Trả về updatedAt
     };
   }
 
   /**
-   *Đồng bộ hàng loạt từ sync_queue (App gửi lên)
+   * Đồng bộ hàng loạt từ sync_queue - Đưa vào Queue xử lý bất đồng bộ
    */
-  /**
- * Đồng bộ hàng loạt từ sync_queue - Đưa vào Queue xử lý bất đồng bộ
- */
-async batchSync(items: any[]) {
-  // 🔥 Đưa vào Queue thay vì xử lý trực tiếp
-  const job = await this.syncQueue.add('process-batch-sync', {
-    items,
-    syncedAt: new Date().toISOString(),
-  });
+  async batchSync(items: any[]) {
+    // 🔥 Đưa vào Queue thay vì xử lý trực tiếp
+    const job = await this.syncQueue.add('process-batch-sync', {
+      items,
+      syncedAt: new Date().toISOString(),
+    });
 
-  return {
-    success: true,
-    message: 'Đang đồng bộ danh sách vé với hệ thống',
-    jobId: job.id,
-    total: items.length,
-  };
-}
+    return {
+      success: true,
+      message: 'Đang đồng bộ danh sách vé với hệ thống',
+      jobId: job.id,
+      total: items.length,
+    };
+  }
 
   /**
    * Kéo các thay đổi từ Server (từ lần sync cuối)
    */
   async getChangesSince(concertId: string, since: Date) {
+    console.log('🔍 [getChangesSince]', {
+      concertId,
+      since: since.toISOString(), 
+    });
+
     // Lấy tất cả vé của concert đã được update sau thời điểm since
     const tickets = await this.ticketRepo
       .createQueryBuilder('ticket')
@@ -184,12 +192,46 @@ async batchSync(items: any[]) {
       .andWhere('ticket.updatedAt > :since', { since })
       .getMany();
 
+    console.log(`Found ${tickets.length} tickets updated since ${since.toISOString()}`);
+
     return tickets.map(ticket => ({
       id: ticket.id,
       qrCode: ticket.qrCode,
       status: ticket.status,
       checkedInAt: ticket.updatedAt, 
-      updatedAt: ticket.updatedAt,
+      updatedAt: ticket.updatedAt, 
     }));
+  }
+
+  /**
+   * Cập nhật ticket - Set thủ công updatedAt
+   */
+  async updateTicket(ticketId: string, data: any) {
+    const ticket = await this.ticketRepo.findOne({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException('Không tìm thấy vé');
+    }
+
+    // Cập nhật các field
+    if (data.status !== undefined) {
+      ticket.status = data.status;
+    }
+    // Các field khác...
+
+    ticket.updatedAt = new Date(); 
+    await this.ticketRepo.save(ticket);
+
+    return {
+      success: true,
+      message: 'Cập nhật vé thành công',
+      ticket: {
+        id: ticket.id,
+        status: ticket.status,
+        updatedAt: ticket.updatedAt,
+      },
+    };
   }
 }

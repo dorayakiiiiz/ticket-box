@@ -28,7 +28,6 @@ export class GuestService {
     private readonly syncQueue: Queue,
   ) {}
 
-
   async getGuests(query: import('./dto/guest.dto').GetAdminGuestsQueryDto) {
     const { page = 1, limit = 10, search } = query;
     const qb = this.guestRepo.createQueryBuilder('g')
@@ -53,6 +52,7 @@ export class GuestService {
       concert: g.concert?.name || 'N/A',
       checkedIn: g.isCheckedIn,
       created: g.createdAt.toISOString().split('T')[0],
+      updatedAt: g.updatedAt, // ✅ Thêm updatedAt vào response
     }));
 
     return {
@@ -77,6 +77,8 @@ export class GuestService {
       guestCode,
       concert,
       isCheckedIn: false,
+      createdAt: new Date(), // ✅ Set thủ công
+      updatedAt: new Date(), // ✅ Set thủ công
     };
 
     if (data.email !== undefined && data.email !== null && data.email !== '') {
@@ -95,6 +97,7 @@ export class GuestService {
         id: guest.id,
         guestCode: guest.guestCode,
         fullName: guest.fullName,
+        updatedAt: guest.updatedAt, // ✅ Trả về updatedAt
       },
     };
   }
@@ -103,22 +106,37 @@ export class GuestService {
     const guest = await this.guestRepo.findOne({ where: { id: guestId } });
     if (!guest) throw new NotFoundException('Không tìm thấy khách mời');
 
+    let hasChanges = false;
+
     if (data.fullName !== undefined && data.fullName !== null) {
       guest.fullName = data.fullName;
+      hasChanges = true;
     }
     if (data.email !== undefined && data.email !== null) {
       guest.email = data.email;
+      hasChanges = true;
     }
     if (data.phone !== undefined && data.phone !== null) {
       guest.phone = data.phone;
+      hasChanges = true;
     }
     if (data.isCheckedIn !== undefined && data.isCheckedIn !== null) {
       guest.isCheckedIn = data.isCheckedIn;
+      hasChanges = true;
     }
 
-    await this.guestRepo.save(guest);
+    if (hasChanges) {
+      guest.updatedAt = new Date(); // ✅ Set thủ công mỗi khi có thay đổi
+      await this.guestRepo.save(guest);
+    }
 
-    return { message: 'Cập nhật khách mời thành công', guest };
+    return { 
+      message: 'Cập nhật khách mời thành công', 
+      guest: {
+        ...guest,
+        updatedAt: guest.updatedAt,
+      }
+    };
   }
 
   async deleteGuest(guestId: string) {
@@ -171,6 +189,8 @@ export class GuestService {
               guestCode,
               concert,
               isCheckedIn: false,
+              createdAt: new Date(), // ✅ Set thủ công
+              updatedAt: new Date(), // ✅ Set thủ công
             };
 
             if (email && email.trim()) guest.email = email.trim();
@@ -183,12 +203,17 @@ export class GuestService {
               batchData.length = 0;
 
               try {
+                // ✅ Cập nhật updatedAt cho batch insert
                 await this.guestRepo
                   .createQueryBuilder()
                   .insert()
                   .into(Guest)
                   .values(dataToInsert)
-                  .orUpdate(['fullName', 'email', 'phone'], ['guestCode'])
+                  .orUpdate(
+                    ['fullName', 'email', 'phone', 'updatedAt'],
+                    ['guestCode']
+                  )
+                  .setParameter('updatedAt', new Date()) // ✅ Set giá trị mới
                   .execute();
                 successCount += dataToInsert.length;
                 this.logger.debug({ count: dataToInsert.length }, 'Batch inserted');
@@ -196,6 +221,7 @@ export class GuestService {
                 this.logger.error({ err }, 'Batch insert failed, falling back to single insert');
                 for (const g of dataToInsert) {
                   try {
+                    g.updatedAt = new Date(); // ✅ Set thủ công
                     await this.guestRepo.save(g);
                     successCount++;
                   } catch (e) {
@@ -221,12 +247,17 @@ export class GuestService {
 
           if (batchData.length > 0) {
             try {
+              // ✅ Cập nhật updatedAt cho final batch
               await this.guestRepo
                 .createQueryBuilder()
                 .insert()
                 .into(Guest)
                 .values(batchData)
-                .orUpdate(['fullName', 'email', 'phone'], ['guestCode'])
+                .orUpdate(
+                  ['fullName', 'email', 'phone', 'updatedAt'],
+                  ['guestCode']
+                )
+                .setParameter('updatedAt', new Date()) // ✅ Set giá trị mới
                 .execute();
               successCount += batchData.length;
               this.logger.debug({ count: batchData.length }, 'Final batch inserted');
@@ -234,6 +265,7 @@ export class GuestService {
               this.logger.error({ err }, 'Final batch insert failed, falling back to single insert');
               for (const g of batchData) {
                 try {
+                  g.updatedAt = new Date(); // ✅ Set thủ công
                   await this.guestRepo.save(g);
                   successCount++;
                 } catch (e) {
@@ -262,7 +294,6 @@ export class GuestService {
     });
   }
 
-  /// Lấy danh sách guest theo concertId
   async findGuestsByConcert(concertId: string) {
     const concert = await this.concertRepo.findOne({ where: { id: concertId } });
     if (!concert) throw new NotFoundException('Concert không tồn tại ');
@@ -281,14 +312,13 @@ export class GuestService {
       phone: guest.phone,
       isCheckedIn: guest.isCheckedIn,
       createdAt: guest.createdAt,
+      updatedAt: guest.updatedAt,
     }));
   }
 
-  /// Scan Guest theo ID
   async scanGuestById(guestId: string, scannedAt: string) {
     const guest = await this.guestRepo.findOne({
       where: { id: guestId },
-      
     });
 
     if (!guest) {
@@ -300,6 +330,7 @@ export class GuestService {
     }
 
     guest.isCheckedIn = true;
+    guest.updatedAt = new Date(); // ✅ Set thủ công
     await this.guestRepo.save(guest);
 
     return {
@@ -309,10 +340,10 @@ export class GuestService {
       guestId: guest.id,
       guestCode: guest.guestCode,
       fullName: guest.fullName,
+      updatedAt: guest.updatedAt,
     };
   }
 
-  /// Đồng bộ hàng loạt từ sync_queue cho Guest
   async batchSyncGuests(items: any[]) {
     const job = await this.syncQueue.add('process-batch-sync-guests', {
       items,
@@ -328,19 +359,21 @@ export class GuestService {
     };
   }
 
-  // backend/src/guest/guest.service.ts
   async getGuestChangesSince(concertId: string, since: Date) {
     try {
-      console.log('🔍 [getGuestChangesSince]', { concertId, since });
+      console.log('🔍 [getGuestChangesSince]', { 
+        concertId, 
+        since: since.toISOString(), // ✅ Log rõ ràng
+      });
 
-  
       const guests = await this.guestRepo
         .createQueryBuilder('guest')
         .where('guest.concertId = :concertId', { concertId })
-        .andWhere('guest.createdAt > :since', { since }) 
-        .orderBy('guest.createdAt', 'DESC') 
+        .andWhere('guest.updatedAt > :since', { since })
+        .orderBy('guest.updatedAt', 'DESC')
         .getMany();
 
+      console.log(`✅ Found ${guests.length} guests updated since ${since.toISOString()}`);
 
       return guests.map(guest => ({
         id: guest.id,
@@ -349,6 +382,7 @@ export class GuestService {
         email: guest.email,
         phone: guest.phone,
         isCheckedIn: guest.isCheckedIn,
+        updatedAt: guest.updatedAt, // ✅ Trả về Date object
       }));
     } catch (error) {
       console.error('[getGuestChangesSince] Error:', error);
