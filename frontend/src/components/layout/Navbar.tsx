@@ -11,6 +11,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const router = useRouter();
   
   const { user, isAuthenticated, initialize, logout, isAuthModalOpen, openAuthModal, closeAuthModal } = useAuthStore();
@@ -21,11 +22,24 @@ export default function Navbar() {
     setMounted(true);
   }, [initialize]);
 
+  // Debounce search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (debouncedSearch.trim()) {
+      router.push(`/search?q=${encodeURIComponent(debouncedSearch.trim())}`);
+    }
+  }, [debouncedSearch, router]);
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
       setOpen(false);
     }
   }

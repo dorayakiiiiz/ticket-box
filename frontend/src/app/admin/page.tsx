@@ -91,9 +91,9 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex-1 flex flex-col px-5 pt-5 pb-4 min-h-0">
-            <div style={{ minHeight: 160 }}>
+            <div className="flex-1 min-h-[160px]">
               {mounted && !isLoading && chart.length > 0 && (
-                <ResponsiveContainer width="100%" height={160}>
+                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chart} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
