@@ -207,21 +207,27 @@ export class MomoStrategy implements PaymentStrategy {
       extraData,
       message,
       orderId,
+      orderInfo,
+      orderType,
       partnerCode,
+      payType,
       requestId,
       responseTime,
       resultCode,
       transId,
     } = payload;
 
-    // Ghép rawSignature theo đúng thứ tự MoMo quy định cho IPN callback
+    // Ghép rawSignature theo đúng thứ tự Alphabet MoMo quy định cho IPN callback v2
     const rawSignature =
       `accessKey=${accessKey}` +
       `&amount=${amount}` +
       `&extraData=${extraData}` +
       `&message=${message}` +
       `&orderId=${orderId}` +
+      `&orderInfo=${orderInfo}` +
+      `&orderType=${orderType}` +
       `&partnerCode=${partnerCode}` +
+      `&payType=${payType}` +
       `&requestId=${requestId}` +
       `&responseTime=${responseTime}` +
       `&resultCode=${resultCode}` +
