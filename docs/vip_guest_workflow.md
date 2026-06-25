@@ -49,7 +49,7 @@ async function importGuestsFromCSV(filePath: string, concertId: string) {
       };
       batchData.push(guest);
 
-      // 2. Gom đủ batch thì Bulk Insert
+      //  Gom đủ batch thì Bulk Insert
       if (batchData.length >= BATCH_SIZE) {
         const dataToInsert = [...batchData];
         batchData.length = 0; // Xóa sạch mảng hiện tại
@@ -73,7 +73,7 @@ async function importGuestsFromCSV(filePath: string, concertId: string) {
           .orUpdate(['fullName', 'phone'], ['email'])
           .execute();
       }
-      console.log('✅ Import danh sách VIP thành công!');
+      console.log('Import danh sách VIP thành công!');
     });
 }
 ```

@@ -22,7 +22,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
@@ -47,12 +49,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (isoString == null) return '--:--';
     final date = DateTime.parse(isoString);
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  // Trạng thái vé: synced=1 -> Hợp lệ, synced=0 -> Chưa sync
-  _TicketStatus _getStatus(Map<String, dynamic> item) {
-    if (item['synced'] == 1) return _TicketStatus.valid;
-    return _TicketStatus.pending;
   }
 
   // ✅ Hàm điều hướng đến ScannerScreen
@@ -158,10 +154,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 const Divider(height: 1, color: Color(0xFFEEEEEE)),
                 itemBuilder: (context, index) {
                   final item = _allHistory[index];
-                  final status = _getStatus(item);
                   return _TicketTile(
                     item: item,
-                    status: status,
                     time: _formatTime(item['checkedInAt']),
                   );
                 },
@@ -170,7 +164,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           ),
         ],
       ),
-      // ✅ THÊM: BottomNavigationBar
+      // ✅ BottomNavigationBar
       bottomNavigationBar: SafeArea(
         child: Container(
           decoration: const BoxDecoration(
@@ -241,11 +235,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Status enum
-// ─────────────────────────────────────────────────────────────
-enum _TicketStatus { valid, pending }
-
-// ─────────────────────────────────────────────────────────────
 // Stat chip
 // ─────────────────────────────────────────────────────────────
 class _StatChip extends StatelessWidget {
@@ -277,89 +266,50 @@ class _StatChip extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Ticket tile  (matches the screenshot style)
+// Ticket tile - Chỉ hiển thị ID
 // ─────────────────────────────────────────────────────────────
 class _TicketTile extends StatelessWidget {
   final Map<String, dynamic> item;
-  final _TicketStatus status;
   final String time;
 
   const _TicketTile({
     required this.item,
-    required this.status,
     required this.time,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bool isSynced = status == _TicketStatus.valid;
-    final Color iconColor = isSynced ? const Color(0xFF4CAF50) : const Color(0xFFFF9800);
-    final IconData iconData = isSynced ? Icons.check_circle : Icons.sync;
-
-    // Badge
-    final String badgeLabel = isSynced ? '✓ Hợp lệ' : '⟳ Chưa sync';
-    final Color badgeBg = isSynced
-        ? const Color(0xFFE8F5E9)
-        : const Color(0xFFFFF3E0);
-    final Color badgeFg = isSynced ? const Color(0xFF2E7D32) : const Color(0xFFE65100);
+    final qrCode = item['qrCode']?.toString() ?? item['id']?.toString() ?? '—';
 
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Left icon
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Icon(iconData, color: iconColor, size: 22),
-          ),
+          const Icon(Icons.qr_code, color: Color(0xFF4CAF50), size: 22),
           const SizedBox(width: 12),
 
-          // Middle content
+          // Middle content - Chỉ hiển thị ID
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // QR code / ticket ID
                 Text(
-                  item['qrCode']?.toString() ?? item['id']?.toString() ?? '—',
+                  qrCode,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                     color: Colors.black87,
                   ),
                 ),
-                const SizedBox(height: 3),
-
-                // Holder name
+                const SizedBox(height: 4),
                 Text(
-                  item['holderName'] ?? 'Không có tên',
-                  style: const TextStyle(fontSize: 13, color: Colors.black87),
-                ),
-                const SizedBox(height: 2),
-
-                // Ticket type / sub-info
-                Text(
-                  item['ticketType'] ?? '',
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-                const SizedBox(height: 6),
-
-                // Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: badgeBg,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    badgeLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: badgeFg,
-                    ),
+                  'Đã quét',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
                   ),
                 ),
               ],
@@ -367,12 +317,9 @@ class _TicketTile extends StatelessWidget {
           ),
 
           // Right: time
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              time,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
+          Text(
+            time,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
           ),
         ],
       ),

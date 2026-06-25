@@ -47,7 +47,7 @@ export class TicketController {
     return result;
   }
 
-  /// 3. Kéo các thay đổi từ Server (từ lần sync cuối)
+  /// Kéo các thay đổi từ Server 
   @Roles(UserRole.ORGANIZER, UserRole.STAFF)
   @Get('/changes')
   async getChangesSince(

@@ -4,6 +4,7 @@ import '../providers/concert_provider.dart';
 import '../providers/ticket_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/database_helper.dart';
+import '../utils/network_sync_service.dart'; // ✅ Import thêm
 import 'scanner_screen.dart';
 
 class ConcertSelectionScreen extends StatefulWidget {
@@ -15,21 +16,32 @@ class ConcertSelectionScreen extends StatefulWidget {
 
 class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   Future<void> _loadData() async {
-    final concertProvider = Provider.of<ConcertProvider>(context, listen: false);
+    if (_isInitialized) return;
+    _isInitialized = true;
+
+    final concertProvider = context.read<ConcertProvider>();
     await concertProvider.loadConcerts(refresh: false);
   }
 
   // ✅ Hàm đồng bộ offline - Cập nhật concert vào database
   void _syncOffline(String concertId, String concertName) async {
-    final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
+    final ticketProvider = context.read<TicketProvider>();
+
+    // ✅ Lấy NetworkSyncService và cập nhật concertId
+    final syncService = context.read<NetworkSyncService>();
+    syncService.updateConcertId(concertId);
+    print('🔵 [SyncOffline] Updated NetworkSyncService with concertId: $concertId');
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -49,12 +61,14 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
       print('   - ID: $concertId');
       print('   - Name: $concertName');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đồng bộ thành công! Đã cập nhật sự kiện.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đồng bộ thành công! Đã cập nhật sự kiện.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -65,128 +79,152 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
     }
   }
 
-  // ✅ Hàm chọn concert - lưu và chuyển đến Scanner
+  // ✅ Hàm chọn concert - cập nhật và chuyển đến Scanner
   Future<void> _selectConcert(String concertId, String concertName) async {
     // Lưu concert vào database
     await _dbHelper.saveCurrentConcert(concertId, concertName);
 
+    // ✅ Cập nhật NetworkSyncService
+    try {
+      final syncService = context.read<NetworkSyncService>();
+      syncService.updateConcertId(concertId);
+      print('🔵 [SelectConcert] Updated NetworkSyncService with concertId: $concertId');
+    } catch (e) {
+      print('❌ Error updating syncService from ConcertSelection: $e');
+    }
+
     // Chuyển đến ScannerScreen
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => const ScannerScreen(),
-      ),
-    );
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const ScannerScreen(),
+        ),
+      );
+    }
   }
 
   Future<void> _refreshConcerts() async {
-    final concertProvider = Provider.of<ConcertProvider>(context, listen: false);
+    final concertProvider = context.read<ConcertProvider>();
     await concertProvider.loadConcerts(refresh: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final concertProvider = Provider.of<ConcertProvider>(context);
-    final concerts = concertProvider.concerts;
+    return Consumer<ConcertProvider>(
+      builder: (context, concertProvider, child) {
+        final concerts = concertProvider.concerts;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: const Text(
-          'CHỌN SỰ KIỆN',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-            fontSize: 16,
-            color: Colors.black87,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE0E0E0), height: 1),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black54),
-            onPressed: concertProvider.isRefreshing ? null : _refreshConcerts,
-          ),
-        ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
-            child: Text(
-              'CA LÀM VIỆC HÔM NAY',
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F5F5),
+          appBar: AppBar(
+            title: const Text(
+              'CHỌN SỰ KIỆN',
               style: TextStyle(
-                color: Colors.black87,
-                fontSize: 18,
                 fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+                fontSize: 16,
+                color: Colors.black87,
               ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(
-              'Chọn sự kiện bạn đang phụ trách',
-              style: TextStyle(color: Colors.black45, fontSize: 13),
+            centerTitle: true,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            iconTheme: const IconThemeData(color: Colors.black87),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(color: const Color(0xFFE0E0E0), height: 1),
             ),
-          ),
-          Expanded(
-            child: concertProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : concertProvider.errorMessage != null && concerts.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    concertProvider.errorMessage!,
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
+            actions: [
+              IconButton(
+                icon: concertProvider.isRefreshing
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.black54,
                   ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _refreshConcerts,
-                    child: const Text('Thử lại'),
-                  ),
-                ],
+                )
+                    : const Icon(Icons.refresh, color: Colors.black54),
+                onPressed: concertProvider.isRefreshing ? null : _refreshConcerts,
               ),
-            )
-                : concerts.isEmpty
-                ? const Center(
-              child: Text(
-                'Không tìm thấy sự kiện nào.',
-                style: TextStyle(color: Colors.black38),
-              ),
-            )
-                : RefreshIndicator(
-              onRefresh: _refreshConcerts,
-              child: ListView.separated(
-                padding: EdgeInsets.zero,
-                itemCount: concerts.length,
-                separatorBuilder: (_, __) =>
-                const Divider(height: 1, color: Color(0xFFE0E0E0)),
-                itemBuilder: (context, index) {
-                  final concert = concerts[index];
-                  return _buildConcertRow(concert);
-                },
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
+                child: Text(
+                  'CA LÀM VIỆC HÔM NAY',
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Text(
+                  'Chọn sự kiện bạn đang phụ trách',
+                  style: TextStyle(color: Colors.black45, fontSize: 13),
+                ),
+              ),
+              Expanded(
+                child: concertProvider.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : concertProvider.errorMessage != null && concerts.isEmpty
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        concertProvider.errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _refreshConcerts,
+                        child: const Text('Thử lại'),
+                      ),
+                    ],
+                  ),
+                )
+                    : concerts.isEmpty
+                    ? const Center(
+                  child: Text(
+                    'Không tìm thấy sự kiện nào.',
+                    style: TextStyle(color: Colors.black38),
+                  ),
+                )
+                    : RefreshIndicator(
+                  onRefresh: _refreshConcerts,
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: concerts.length,
+                    separatorBuilder: (_, __) =>
+                    const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                    itemBuilder: (context, index) {
+                      final concert = concerts[index];
+                      return _buildConcertRow(concert);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildConcertRow(concert) {
+  Widget _buildConcertRow(dynamic concert) {
     final concertId = concert.id;
     return InkWell(
+      onTap: () => _selectConcert(concertId, concert.name),
       child: Container(
         color: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

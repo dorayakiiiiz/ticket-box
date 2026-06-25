@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../providers/ticket_provider.dart';
 import '../services/database_helper.dart';
+import '../utils/network_sync_service.dart';
 import 'history_screen.dart';
 import 'concert_selection_screen.dart';
 import 'settings_screen.dart';
@@ -67,6 +68,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
           _concertName = concertName;
           _isLoading = false;
         });
+        // Cập nhật NetworkSyncService với concertId hiện tại
+        try {
+          final syncService = Provider.of<NetworkSyncService>(context, listen: false);
+          syncService.updateConcertId(concertId);
+          print('🔧 ScannerScreen updated syncService concertId=$concertId');
+        } catch (e) {
+          print('Error updating syncService concertId: $e');
+        }
         // Load stats sau khi có concertId
         await _loadStats();
       } else {
@@ -178,7 +187,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     // Gọi provider để validate
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
-    final result = await ticketProvider.validateTicket(qrCode);
+    final result = await ticketProvider.scanQR(qrCode);
 
     if (!mounted) return;
 
@@ -440,137 +449,134 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ),
             ),
 
-            // Khu vực camera
+            // Khu vực camera - KHÔNG BO GÓC
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: double.infinity,
-                    color: const Color(0xFFEDEDF2),
-                    child: _hasPermission
-                        ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (_scanningStarted)
-                          MobileScanner(
-                            controller: _cameraController,
-                            onDetect: _onQRScanned,
+                child: Container(
+                  width: double.infinity,
+                  color: const Color(0xFFEDEDF2), // Không bo góc
+                  child: _hasPermission
+                      ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (_scanningStarted)
+                        MobileScanner(
+                          controller: _cameraController,
+                          onDetect: _onQRScanned,
+                        ),
+                      if (!_scanningStarted)
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.qr_code_2,
+                                  size: 36,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Sẵn sàng quét vé',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
-                        if (!_scanningStarted)
-                          Center(
+                        ),
+                      if (_scanningStarted)
+                        Center(child: _buildScanFrame()),
+                      if (_scanningStarted)
+                        Positioned(
+                          top: 12,
+                          right: 12,
+                          child: IconButton(
+                            onPressed: _stopScanning,
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                            ),
+                          ),
+                        ),
+                      if (_scanningStarted)
+                        Positioned(
+                          top: 12,
+                          left: 12,
+                          child: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _cameraController.toggleTorch();
+                              });
+                            },
+                            icon: Icon(
+                              _cameraController.torchEnabled
+                                  ? Icons.flashlight_on
+                                  : Icons.flashlight_off,
+                              color: Colors.white,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                            ),
+                          ),
+                        ),
+                      if (ticketProvider.isValidating)
+                        Container(
+                          color: Colors.black.withOpacity(0.7),
+                          child: const Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 6,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.qr_code_2,
-                                    size: 36,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Sẵn sàng quét vé',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 13,
-                                  ),
+                                CircularProgressIndicator(color: Colors.white),
+                                SizedBox(height: 16),
+                                Text(
+                                  'Đang xác thực vé...',
+                                  style: TextStyle(color: Colors.white),
                                 ),
                               ],
                             ),
                           ),
-                        if (_scanningStarted)
-                          Center(child: _buildScanFrame()),
-                        if (_scanningStarted)
-                          Positioned(
-                            top: 12,
-                            right: 12,
-                            child: IconButton(
-                              onPressed: _stopScanning,
-                              icon: const Icon(Icons.close, color: Colors.white),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.black54,
-                              ),
-                            ),
+                        ),
+                    ],
+                  )
+                      : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.camera_alt,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Cần quyền truy cập camera',
+                          style: TextStyle(color: Colors.black54),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _checkPermission,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurpleAccent,
                           ),
-                        if (_scanningStarted)
-                          Positioned(
-                            top: 12,
-                            left: 12,
-                            child: IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  _cameraController.toggleTorch();
-                                });
-                              },
-                              icon: Icon(
-                                _cameraController.torchEnabled
-                                    ? Icons.flashlight_on
-                                    : Icons.flashlight_off,
-                                color: Colors.white,
-                              ),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.black54,
-                              ),
-                            ),
-                          ),
-                        if (ticketProvider.isValidating)
-                          Container(
-                            color: Colors.black.withOpacity(0.7),
-                            child: const Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  CircularProgressIndicator(color: Colors.white),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Đang xác thực vé...',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                          child: const Text('Cấp quyền camera'),
+                        ),
                       ],
-                    )
-                        : Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.camera_alt,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Cần quyền truy cập camera',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _checkPermission,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepPurpleAccent,
-                            ),
-                            child: const Text('Cấp quyền camera'),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ),
@@ -671,7 +677,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  // Khung quét QR kiểu 4 góc vuông
+  // Khung quét QR kiểu 4 góc vuông - KHÔNG BO GÓC
   Widget _buildScanFrame() {
     const double size = 260;
     const double cornerLength = 32;
@@ -725,12 +731,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
           left: left ? BorderSide(color: color, width: borderWidth) : BorderSide.none,
           right: !left ? BorderSide(color: color, width: borderWidth) : BorderSide.none,
         ),
-        borderRadius: BorderRadius.only(
-          topLeft: top && left ? const Radius.circular(12) : Radius.zero,
-          topRight: top && !left ? const Radius.circular(12) : Radius.zero,
-          bottomLeft: !top && left ? const Radius.circular(12) : Radius.zero,
-          bottomRight: !top && !left ? const Radius.circular(12) : Radius.zero,
-        ),
+        // ✅ KHÔNG BO GÓC
+        borderRadius: BorderRadius.zero,
       ),
     );
   }

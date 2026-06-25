@@ -51,4 +51,9 @@ class AuthRepository {
     return user;
   }
 
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    await _apiService.changePassword(currentPassword, newPassword);
+  }
+
 }

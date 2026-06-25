@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'concert_selection_screen.dart';
 import 'scanner_screen.dart';
 import 'history_screen.dart';
+import 'login_screen.dart';
+import 'guest_list_screen.dart'; // ✅ Thêm import
 import '../services/database_helper.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
@@ -18,12 +20,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _selectedIndex = 2;
   final TextEditingController _nameController = TextEditingController();
 
-  // Password form controllers
   final TextEditingController _currentPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  // Password form visibility state
   bool _showPasswordForm = false;
   bool _obscureCurrent = true;
   bool _obscureNew = true;
@@ -146,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            '✅ Đã lưu thông tin thành công!',
+            'Đã lưu thông tin thành công!',
             style: TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.green,
@@ -156,7 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ ${authProvider.errorMessage ?? 'Cập nhật thất bại'}'),
+          content: Text('${ 'Cập nhật thất bại'}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -198,29 +198,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    // TODO: Gọi authProvider.changePassword(current, newPass) khi có API
-    // Ví dụ:
-    // final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    // final success = await authProvider.changePassword(current, newPass);
-    // if (!success) { show error; return; }
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.changePassword(current, newPass);
 
-    setState(() {
-      _showPasswordForm = false;
-      _currentPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmPasswordController.clear();
-      _obscureCurrent = true;
-      _obscureNew = true;
-      _obscureConfirm = true;
-    });
+    if (success && mounted) {
+      setState(() {
+        _showPasswordForm = false;
+        _currentPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        _obscureCurrent = true;
+        _obscureNew = true;
+        _obscureConfirm = true;
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ Đổi mật khẩu thành công!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đổi mật khẩu thành công!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(' ${ 'Đổi mật khẩu thất bại'}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _cancelPasswordForm() {
@@ -259,6 +265,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _navigateToGuestList() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const GuestListScreen(),
+      ),
+    );
+  }
+
   String _getDisplayName() {
     if (_currentUser != null && _currentUser!.fullName.isNotEmpty) {
       return _currentUser!.fullName;
@@ -278,7 +292,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return name.isNotEmpty ? name[0].toUpperCase() : 'U';
   }
 
-  // Helper: build password TextField
   Widget _buildPasswordField({
     required TextEditingController controller,
     required String label,
@@ -385,7 +398,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Profile Card ──────────────────────────────────────
             Container(
               color: Colors.white,
               padding: const EdgeInsets.symmetric(
@@ -458,7 +470,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 12),
 
-            // ── Thông tin cá nhân ─────────────────────────────────
             Container(
               color: Colors.white,
               padding: const EdgeInsets.all(20),
@@ -549,7 +560,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 12),
 
-            // ── Mật khẩu section ──────────────────────────────────
             Container(
               color: Colors.white,
               padding: const EdgeInsets.symmetric(
@@ -557,7 +567,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header row
                   Row(
                     mainAxisAlignment:
                     MainAxisAlignment.spaceBetween,
@@ -596,7 +605,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
 
-                  // Subtitle (chỉ hiện khi form ẩn)
                   if (!_showPasswordForm) ...[
                     const SizedBox(height: 4),
                     const Text(
@@ -606,7 +614,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
 
-                  // Inline password form
                   if (_showPasswordForm) ...[
                     const SizedBox(height: 16),
 
@@ -640,7 +647,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Hủy / Cập nhật
                     Row(
                       children: [
                         Expanded(
@@ -698,7 +704,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 12),
 
-            // ── Đổi sự kiện soát vé ───────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: OutlinedButton.icon(
@@ -721,6 +726,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 10),
 
+            // ── Danh sách khách mời ──────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: OutlinedButton.icon(
+                onPressed: _navigateToGuestList,
+                icon: const Icon(Icons.people, size: 18),
+                label: const Text('Danh sách khách mời'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black87,
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFE0E0E0)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
             // ── Đăng xuất ─────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -735,31 +762,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       actions: [
                         TextButton(
-                          onPressed: () =>
-                              Navigator.pop(context),
+                          onPressed: () => Navigator.pop(context),
                           child: const Text('Hủy'),
                         ),
                         TextButton(
                           onPressed: () async {
-                            Navigator.pop(context);
-                            final authProvider =
-                            Provider.of<AuthProvider>(
-                                context,
-                                listen: false);
+
+                            final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(context);
+                            final authProvider = Provider.of<AuthProvider>(
+                              context,
+                              listen: false,
+                            );
+
+                            // Đóng dialog
+                            navigator.pop();
+
+                            // Gọi logout
                             await authProvider.logout();
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(
+
+                            if (!mounted) return;
+
+                            // Hiển thị thông báo thành công
+                            messenger.showSnackBar(
                               const SnackBar(
-                                content: Text('Đã đăng xuất!'),
-                                backgroundColor:
-                                Color(0xFF1A1A2E),
+                                content: Text(
+                                  'Đã đăng xuất thành công!',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: Duration(seconds: 2),
                               ),
                             );
+
+                            // Đợi SnackBar hiển thị rồi chuyển sang LoginScreen
+                            await Future.delayed(const Duration(milliseconds: 300));
+
+                            if (mounted) {
+                              navigator.pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                                    (route) => false,
+                              );
+                            }
                           },
                           child: const Text(
                             'Đăng xuất',
-                            style:
-                            TextStyle(color: Colors.red),
+                            style: TextStyle(color: Colors.red),
                           ),
                         ),
                       ],
@@ -775,8 +825,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  padding:
-                  const EdgeInsets.symmetric(vertical: 14),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   minimumSize: const Size(double.infinity, 48),
                 ),
               ),

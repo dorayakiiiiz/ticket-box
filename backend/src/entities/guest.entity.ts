@@ -5,7 +5,6 @@ import { Concert } from './concert.entity';
 export class Guest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
   @Column()
   fullName: string;
 
@@ -16,7 +15,7 @@ export class Guest {
   phone: string;
 
   @Column({ unique: true })
-  guestCode: string; // Generated or from CSV
+  guestCode: string;
 
   @Column({ default: false })
   isCheckedIn: boolean;

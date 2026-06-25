@@ -107,31 +107,6 @@ export class AuthService {
     return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, hasPassword: true } };
   }
 
-
-  async updateProfile(userId: string, fullName: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) {
-      throw ('User not found');
-    }
-
-    if (!fullName || fullName.trim().length === 0) {
-      throw new BadRequestException('Tên không được để trống');
-    }
-
-    user.fullName = fullName.trim();
-    await this.userRepo.save(user);
-
-    return {
-      message: 'Cập nhật thông tin thành công',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-      }
-    };
-  }
-
   async supabaseOAuthLogin(supabaseToken: string) {
     // Frontend gọi Supabase OAuth, lấy được session token và gửi lên Backend đây
     const { data: { user: sbUser }, error } = await this.supabase.auth.getUser(supabaseToken);

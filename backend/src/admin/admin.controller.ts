@@ -1,4 +1,5 @@
-import { Controller, Get, Patch, Delete, Body, Param, Query, Post } from '@nestjs/common';
+import { Controller, Get, Patch, Delete, Body, Param, Query, Post, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminService } from './admin.service';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from 'src/entities/user.entity';
@@ -49,4 +50,3 @@ export class AdminController {
     return this.adminService.deleteUser(id);
   }
 }
-
