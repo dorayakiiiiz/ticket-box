@@ -25,6 +25,12 @@ export class LoginDto {
   password: string;
 }
 
+export class UpdateProfileDto {
+  @IsString()
+  @IsNotEmpty()
+  fullName: string;
+}
+
 export class VerifyOtpDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
   @IsNotEmpty({ message: 'Email không được để trống' })

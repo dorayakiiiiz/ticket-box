@@ -22,7 +22,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'ticketbox.db');
     return await openDatabase(
       path,
-      version: 1, //chạy khi file được tạo lần đầu tiên
+      version: 1,
       onCreate: _onCreate,
     );
   }
@@ -51,18 +51,29 @@ class DatabaseHelper {
       )
     ''');
 
-    // Bảng tickets dùng để đồng bộ offline danh sách vé
+    // SỬA: Bảng current_concerts - Thêm concertId và concertName
+    await db.execute('''
+      CREATE TABLE current_concerts(
+        id TEXT PRIMARY KEY,
+        concertId TEXT NOT NULL,
+        concertName TEXT NOT NULL,
+        updatedAt TEXT
+      )
+    ''');
+
+    // SỬA: Bảng tickets - Thêm cột updatedAt
     await db.execute('''
       CREATE TABLE tickets(
         id TEXT PRIMARY KEY,
         qrCode TEXT NOT NULL UNIQUE,
         status TEXT NOT NULL,
         checkedInAt TEXT,
-        synced INTEGER DEFAULT 0
+        synced INTEGER DEFAULT 0,
+        updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
 
-    // Bảng guests 
+    // Bảng guests - Thêm cột updatedAt
     await db.execute('''
       CREATE TABLE guests(
         id TEXT PRIMARY KEY,
@@ -71,7 +82,20 @@ class DatabaseHelper {
         phone TEXT,
         status TEXT NOT NULL,
         checkedInAt TEXT,
-        synced INTEGER DEFAULT 0
+        synced INTEGER DEFAULT 0,
+        updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // Bảng sync_queue - Lưu hàng đợi chờ đồng bộ
+    await db.execute('''
+      CREATE TABLE sync_queue(
+        id TEXT PRIMARY KEY,
+        ticketId TEXT NOT NULL,
+        type TEXT NOT NULL,              -- 'TICKET' hoặc 'GUEST'
+        action TEXT NOT NULL,            -- 'CHECK_IN' hoặc 'UPDATE'
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        createdAt TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
 
@@ -80,6 +104,8 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_tickets_status ON tickets(status)');
     await db.execute('CREATE INDEX idx_guests_email ON guests(email)');
     await db.execute('CREATE INDEX idx_guests_status ON guests(status)');
+    await db.execute('CREATE INDEX idx_sync_queue_status ON sync_queue(status)');
+    await db.execute('CREATE INDEX idx_sync_queue_ticketId ON sync_queue(ticketId)');
   }
 
   // ============ USER METHODS ============
@@ -88,7 +114,7 @@ class DatabaseHelper {
   Future<void> saveUser(UserModel user) async {
     final db = await database;
     await db.insert('users', user.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace); //xử lí khi bị trùng
+        conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   //Lấy thông tin nhân viên đang đăng nhập
@@ -134,11 +160,50 @@ class DatabaseHelper {
     return maps.map((map) => ConcertModel.fromMap(map)).toList();
   }
 
+
+  // ============ CURRENT CONCERT METHODS ============
+
+  /// Lấy ID của sự kiện đang được chọn
+  Future<String?> getCurrentConcertId() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('current_concerts');
+    if (maps.isNotEmpty) {
+      return maps.first['concertId'] as String?;
+    }
+    return null;
+  }
+
+  /// Lấy tên của sự kiện đang được chọn
+  Future<String?> getCurrentConcertName() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('current_concerts');
+    if (maps.isNotEmpty) {
+      return maps.first['concertName'] as String?;
+    }
+    return null;
+  }
+
+
+  Future<void> saveCurrentConcert(String concertId, String concertName) async {
+    final db = await database;
+
+    // Xóa dữ liệu cũ (chỉ giữ 1 record)
+    await db.delete('current_concerts');
+    // Chèn dữ liệu mới
+    await db.insert('current_concerts', {
+      'id': 'current_1', // Chỉ có 1 record duy nhất
+      'concertId': concertId,
+      'concertName': concertName,
+      'updatedAt': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
   //Xóa bảng concert
   Future<void> clearConcerts() async {
     final db = await database;
     await db.delete('concerts');
   }
+
 
   // ============ TICKET METHODS ============
 
@@ -167,7 +232,7 @@ class DatabaseHelper {
     await db.delete('tickets');
   }
 
-  // Lấy vé theo QR code 
+  // Lấy vé theo QR code
   Future<TicketModel?> getTicketByQr(String qrCode) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -182,7 +247,7 @@ class DatabaseHelper {
   }
 
   // Cập nhật trạng thái vé sau khi check-in
-  Future<void> updateTicketStatus(String qrCode, DateTime checkedInAt) async {
+  Future<void> updateTicketStatus(String ticketId, DateTime checkedInAt) async {
     final db = await database;
     await db.update(
       'tickets',
@@ -190,9 +255,26 @@ class DatabaseHelper {
         'status': 'CHECKED_IN',
         'checkedInAt': checkedInAt.toIso8601String(),
         'synced': 0,
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [ticketId],
+    );
+  }
+
+  // Cập nhật trạng thái vé từ Server (dùng trong background sync)
+  Future<void> updateTicketFromServer(Map<String, dynamic> serverTicket) async {
+    final db = await database;
+    await db.update(
+      'tickets',
+      {
+        'status': serverTicket['status'],
+        'checkedInAt': serverTicket['checkedInAt'],
+        'synced': 1,
+        'updatedAt': DateTime.now().toIso8601String(),
       },
       where: 'qrCode = ?',
-      whereArgs: [qrCode],
+      whereArgs: [serverTicket['qrCode']],
     );
   }
 
@@ -274,6 +356,7 @@ class DatabaseHelper {
         'status': 'CHECKED_IN',
         'checkedInAt': checkedInAt.toIso8601String(),
         'synced': 0,
+        'updatedAt': DateTime.now().toIso8601String(),
       },
       where: 'email = ?',
       whereArgs: [email],
@@ -356,6 +439,73 @@ class DatabaseHelper {
       'tickets',
       where: 'status = ? AND checkedInAt < ?',
       whereArgs: ['CHECKED_IN', sevenDaysAgo.toIso8601String()],
+    );
+  }
+
+  // ============================================================
+  // QUẢN LÝ SYNC QUEUE
+  // ============================================================
+
+  /// Lấy tất cả pending tickets
+  Future<List<Map<String, dynamic>>> getPendingQueue() async {
+    final db = await database;
+    return await db.query(
+      'sync_queue',
+      where: 'status = ?',
+      whereArgs: ['PENDING'],
+      orderBy: 'createdAt ASC',
+    );
+  }
+
+  /// Thêm vào hàng đợi
+  Future<void> addToPendingQueue({
+    required String id,
+    required String ticketId,
+    required String type,
+    required String action,
+  }) async {
+    final db = await database;
+    await db.insert('sync_queue', {
+      'id': id,
+      'ticketId': ticketId,
+      'type': type,
+      'action': action,
+      'status': 'PENDING',
+    });
+  }
+
+  /// Xóa khỏi hàng đợi
+  Future<void> removeFromPendingQueue(String id) async {
+    final db = await database;
+    await db.delete(
+      'sync_queue',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Xóa nhiều khỏi hàng đợi
+  Future<void> clearPendingQueue(List<String> ids) async {
+    final db = await database;
+    final batch = db.batch();
+    for (var id in ids) {
+      batch.delete(
+        'sync_queue',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Cập nhật trạng thái sync_queue
+  Future<void> updateSyncStatus(String id, String status) async {
+    final db = await database;
+    await db.update(
+      'sync_queue',
+      {'status': status},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }

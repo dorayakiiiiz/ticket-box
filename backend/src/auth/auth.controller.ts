@@ -1,8 +1,8 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Res, Put, Req } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { LoginDto, SignupDto, SupabaseLoginDto, VerifyOtpDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
+import { LoginDto, SignupDto, SupabaseLoginDto, VerifyOtpDto, ForgotPasswordDto, ResetPasswordDto, UpdateProfileDto } from './dto/auth.dto';
 import { Public } from 'src/common/guards/jwt.strategy';
 import { CaptchaGuard } from 'src/common/guards/captcha.guard';
 
@@ -66,7 +66,6 @@ export class AuthController {
   @Public()
   @UseGuards(CaptchaGuard)
   @Post('forgot-password')
-
   @HttpCode(HttpStatus.OK)
   forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.authService.forgotPassword(body.email);
@@ -77,5 +76,17 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   resetPassword(@Body() body: ResetPasswordDto) {
     return this.authService.resetPassword(body.email, body.code, body.newPassword);
+  }
+
+
+  @Put('profile')
+  @HttpCode(HttpStatus.OK)
+  async updateProfile(@Req() req: Request, @Body() body: UpdateProfileDto) {
+    // Lấy user ID từ request (đã được gán bởi JWT Guard)
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      throw ('Unauthorized');
+    }
+    return this.authService.updateProfile(userId, body.fullName);
   }
 }

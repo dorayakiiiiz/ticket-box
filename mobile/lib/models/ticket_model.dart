@@ -4,6 +4,7 @@ class TicketModel {
   final String status;
   final String? checkedInAt;
   final bool synced;
+  final String? updatedAt; // 🆕 MỚI: Thời gian cập nhật cuối
 
   TicketModel({
     required this.id,
@@ -11,6 +12,7 @@ class TicketModel {
     required this.status,
     this.checkedInAt,
     this.synced = false,
+    this.updatedAt,
   });
 
   // Từ JSON (API) → Object
@@ -21,6 +23,7 @@ class TicketModel {
       status: json['status'] as String? ?? 'UNKNOWN',
       checkedInAt: json['checkedInAt'] as String?,
       synced: json['synced'] as bool? ?? false,
+      updatedAt: json['updatedAt'] as String?,
     );
   }
 
@@ -32,6 +35,7 @@ class TicketModel {
       status: map['status'] as String? ?? 'UNKNOWN',
       checkedInAt: map['checkedInAt'] as String?,
       synced: map['synced'] == 1,
+      updatedAt: map['updatedAt'] as String?,
     );
   }
 
@@ -43,6 +47,7 @@ class TicketModel {
       'status': status,
       'checkedInAt': checkedInAt,
       'synced': synced ? 1 : 0,
+      'updatedAt': updatedAt ?? DateTime.now().toIso8601String(),
     };
   }
 }

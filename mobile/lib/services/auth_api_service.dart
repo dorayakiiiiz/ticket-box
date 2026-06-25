@@ -12,23 +12,43 @@ class AuthApiService {
   // Đăng nhập
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      final response = await publicDio.post('/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
+      final response = await publicDio.post(
+        '/auth/login',
+        data: {'email': email, 'password': password},
+      );
       return response.data;
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         throw Exception('Sai email hoặc mật khẩu');
       }
-      throw Exception('Không thể kết nối vơi máy chủ');
+      throw Exception('Không thể kết nối với máy chủ: $e');
     } catch (e) {
       throw Exception('Đăng nhập thất bại');
     }
   }
 
+  Future<Map<String, dynamic>> updateProfile(String fullName) async {
+    try {
+      final response = await privateDio.put(
+        '/auth/profile',
+        data: {'fullName': fullName},
+      );
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
+      if (e.response?.statusCode == 400) {
+        final errorMessage = e.response?.data?['message'] ?? 'Tên không hợp lệ';
+        throw Exception(errorMessage);
+      }
+      throw ('Không thể kết nối với máy chủ');
+    } catch (e) {
+      throw ('Cập nhật thất bại');
+    }
+  }
 
-  Future<void> logout(String token) async {
+  Future<void> logout() async {
     try {
       await privateDio.post('/auth/logout');
     } catch (e) {

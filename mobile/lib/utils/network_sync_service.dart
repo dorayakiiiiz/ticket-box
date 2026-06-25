@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../repositories/ticket_repository.dart';
 import '../services/database_helper.dart';
+import '../services/sync_api_service.dart';
+import '../models/ticket_model.dart';
 
 class NetworkSyncService {
   static final NetworkSyncService _instance = NetworkSyncService._internal();
@@ -12,9 +14,13 @@ class NetworkSyncService {
   final Connectivity _connectivity = Connectivity();
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final TicketRepository _ticketRepository = TicketRepository();
+  final SyncApiService _apiService = SyncApiService();
 
-  void startBackgroundSync() {
-    // Lắng nghe thay đổi mạng
+  String? _currentConcertId;
+
+  void startBackgroundSync({String? concertId}) {
+    _currentConcertId = concertId;
+
     _connectivity.onConnectivityChanged.listen((result) async {
       if (result != ConnectivityResult.none) {
         print('Network connected, syncing pending checkins...');
@@ -22,8 +28,7 @@ class NetworkSyncService {
       }
     });
 
-    // Hẹn giờ mỗi 1 phút
-    _syncTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+    _syncTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       final connectivityResult = await _connectivity.checkConnectivity();
       if (connectivityResult != ConnectivityResult.none) {
         await _syncPendingCheckins();
@@ -31,25 +36,50 @@ class NetworkSyncService {
     });
   }
 
-  // Đồng bộ vé chưa sync
   Future<void> _syncPendingCheckins() async {
     try {
-      // Lấy vé chưa đồng bộ (status = USED, synced = 0)
       final unsyncedTickets = await _dbHelper.getUnsyncedTickets();
 
-      //Nếu không có vé nào chưa đồng bộ thì sẽ không gọi API
       if (unsyncedTickets.isEmpty) {
-        print('📭 No pending checkins to sync');
-        return;
+        print('No pending checkins to sync');
+      } else {
+        await _ticketRepository.syncPendingQueue();
+        print('Synced ${unsyncedTickets.length} checkins successfully');
       }
 
-      await _ticketRepository.syncPendingCheckins();
-
-      print('Synced ${unsyncedTickets.length} checkins successfully');
+      if (_currentConcertId != null) {
+        final changes = await _apiService.getChangesSince(
+          concertId: _currentConcertId!,
+          since: DateTime(1970),
+        );
+        if (changes.isNotEmpty) {
+          print('Pulling ${changes.length} changes from server...');
+          for (var serverTicket in changes) {
+            await _updateLocalTicketFromServer(serverTicket);
+          }
+          print('Updated local with ${changes.length} changes');
+        }
+      }
 
     } catch (e) {
       print('Error syncing checkins: $e');
     }
+  }
+
+  Future<void> _updateLocalTicketFromServer(Map<String, dynamic> serverTicket) async {
+    final localTicket = await _ticketRepository.getTicketByQr(serverTicket['id']);
+    if (localTicket == null) {
+      final ticket = TicketModel.fromJson(serverTicket);
+      await _ticketRepository.saveTickets([ticket]);
+      return;
+    }
+    if (serverTicket['status'] == 'CHECKED_IN' && localTicket.status != 'CHECKED_IN') {
+      await _ticketRepository.markTicketAsCheckedIn(serverTicket['id']);
+    }
+  }
+
+  void updateConcertId(String concertId) {
+    _currentConcertId = concertId;
   }
 
   void stopBackgroundSync() {

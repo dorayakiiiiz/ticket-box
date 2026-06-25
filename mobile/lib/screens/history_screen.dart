@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
+import 'scanner_screen.dart';
+import 'settings_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -51,6 +53,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
   _TicketStatus _getStatus(Map<String, dynamic> item) {
     if (item['synced'] == 1) return _TicketStatus.valid;
     return _TicketStatus.pending;
+  }
+
+  // ✅ Hàm điều hướng đến ScannerScreen
+  void _navigateToScanner() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const ScannerScreen()),
+    );
+  }
+
+  // ✅ Hàm điều hướng đến SettingsScreen
+  void _navigateToSettings() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
   }
 
   @override
@@ -150,6 +166,72 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   );
                 },
               ),
+            ),
+          ),
+        ],
+      ),
+      // ✅ THÊM: BottomNavigationBar
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: Color(0xFFE0E0E0), width: 0.5)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.qr_code_scanner,
+                  label: 'Quét vé',
+                  active: false,
+                  onTap: _navigateToScanner,
+                ),
+              ),
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.history,
+                  label: 'Lịch sử',
+                  active: true,
+                  onTap: () {},
+                ),
+              ),
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.settings,
+                  label: 'Cài đặt',
+                  active: false,
+                  onTap: _navigateToSettings,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ Widget điều hướng bottom nav
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    final Color color = active ? Colors.deepPurple : Colors.grey;
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: active ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
         ],

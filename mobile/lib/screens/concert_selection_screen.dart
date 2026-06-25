@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/concert_provider.dart';
 import '../providers/ticket_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/database_helper.dart';
 import 'scanner_screen.dart';
 
 class ConcertSelectionScreen extends StatefulWidget {
@@ -13,6 +14,8 @@ class ConcertSelectionScreen extends StatefulWidget {
 }
 
 class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+
   @override
   void initState() {
     super.initState();
@@ -20,20 +23,12 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
   }
 
   Future<void> _loadData() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final concertProvider = Provider.of<ConcertProvider>(context, listen: false);
-
     await concertProvider.loadConcerts(refresh: false);
-
-    /*
-    if (authProvider.currentUser != null) {
-      await concertProvider.loadConcerts(authProvider.currentUser!.token);
-    }
-     */
   }
 
+  // ✅ Hàm đồng bộ offline - Cập nhật concert vào database
   void _syncOffline(String concertId, String concertName) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -43,15 +38,20 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
         duration: Duration(seconds: 2),
       ),
     );
-    //tạo thời comment để chạy local
-    //if (authProvider.currentUser == null) return;
 
     final success = await ticketProvider.syncTickets(concertId);
 
     if (success && mounted) {
+      // CẬP NHẬT concert vào bảng current_concerts
+      await _dbHelper.saveCurrentConcert(concertId, concertName);
+
+      print('    Đã lưu concert vào current_concerts:');
+      print('   - ID: $concertId');
+      print('   - Name: $concertName');
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đồng bộ thành công! Dữ liệu đã sẵn sàng để soát vé offline.'),
+          content: Text('Đồng bộ thành công! Đã cập nhật sự kiện.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -65,13 +65,22 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
     }
   }
 
-  Future<void> _refreshConcerts() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final concertProvider = Provider.of<ConcertProvider>(context, listen: false);
+  // ✅ Hàm chọn concert - lưu và chuyển đến Scanner
+  Future<void> _selectConcert(String concertId, String concertName) async {
+    // Lưu concert vào database
+    await _dbHelper.saveCurrentConcert(concertId, concertName);
 
-    if (authProvider.currentUser != null) {
-      await concertProvider.loadConcerts(refresh: true);
-    }
+    // Chuyển đến ScannerScreen
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => const ScannerScreen(),
+      ),
+    );
+  }
+
+  Future<void> _refreshConcerts() async {
+    final concertProvider = Provider.of<ConcertProvider>(context, listen: false);
+    await concertProvider.loadConcerts(refresh: true);
   }
 
   @override
@@ -178,16 +187,6 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
   Widget _buildConcertRow(concert) {
     final concertId = concert.id;
     return InkWell(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ConcertLoadingScreen(
-              concertId: concertId,
-              concertName: concert.name,
-            ),
-          ),
-        );
-      },
       child: Container(
         color: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -264,7 +263,6 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
                       ),
                     ],
                   ),
-                  // Nút Đồng bộ Offline
                   const SizedBox(height: 8),
                   Align(
                     alignment: Alignment.centerRight,
@@ -306,227 +304,8 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
               ),
             ),
 
-            // Chevron
             const SizedBox(width: 8),
             const Icon(Icons.chevron_right, color: Colors.black38, size: 22),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-// Loading Screen
-// ─────────────────────────────────────────────
-
-class ConcertLoadingScreen extends StatefulWidget {
-  final String concertId;
-  final String concertName;
-
-  const ConcertLoadingScreen({
-    super.key,
-    required this.concertId,
-    required this.concertName,
-  });
-
-  @override
-  State<ConcertLoadingScreen> createState() => _ConcertLoadingScreenState();
-}
-
-class _ConcertLoadingScreenState extends State<ConcertLoadingScreen> {
-  double _progress = 0.0;
-  final List<String> _completedSteps = [];
-
-  static const _steps = [
-    'Kết nối máy chủ',
-    'Xác thực phiên làm việc',
-    'Tải danh sách vé',
-    'Chuẩn bị máy quét',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _runLoadingSequence();
-  }
-
-  Future<void> _runLoadingSequence() async {
-    final startTime = DateTime.now();
-    const totalDuration = Duration(seconds: 3);
-
-    while (true) {
-      final elapsed = DateTime.now().difference(startTime);
-      final progress = (elapsed.inMilliseconds / totalDuration.inMilliseconds)
-          .clamp(0.0, 1.0);
-
-      if (!mounted) return;
-      setState(() {
-        _progress = progress;
-
-        final stepIndex = (progress * _steps.length).floor();
-        for (int i = _completedSteps.length; i <= stepIndex && i < _steps.length; i++) {
-          if (!_completedSteps.contains(_steps[i])) {
-            _completedSteps.add(_steps[i]);
-          }
-        }
-      });
-
-      if (progress >= 1.0) break;
-      await Future.delayed(const Duration(milliseconds: 16));
-    }
-
-    setState(() {
-      for (final step in _steps) {
-        if (!_completedSteps.contains(step)) {
-          _completedSteps.add(step);
-        }
-      }
-    });
-
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ScannerScreen(
-          concertId: widget.concertId,
-          concertName: widget.concertName,
-        ),
-      ),
-    );
-
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final percent = (_progress * 100).round();
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black87),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE0E0E0), height: 1),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 60),
-
-            // Icon
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F0F0),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.storage_rounded,
-                size: 42,
-                color: Color(0xFF9E9E9E),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Title
-            const Text(
-              'ĐANG TẢI DỮ LIỆU...',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: Colors.black87,
-                letterSpacing: 0.5,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Subtitle
-            Text(
-              'Đang tải danh sách vé của ${widget.concertName}',
-              style: const TextStyle(fontSize: 13, color: Colors.black45),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 36),
-
-            // Progress label row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Tiến độ',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  '$percent%',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: _progress,
-                minHeight: 6,
-                backgroundColor: const Color(0xFFEEEEEE),
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF212121)),
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // Completed steps
-            Column(
-              children: _completedSteps.map((step) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.check_circle,
-                        color: Color(0xFF4CAF50),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        step,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
           ],
         ),
       ),
