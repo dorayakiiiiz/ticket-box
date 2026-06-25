@@ -151,7 +151,7 @@ export class PaymentService {
       // Lúc này Order đã an toàn, ta lấy thêm TicketType và User để xài cho việc tạo vé
       const orderWithRelations = await queryRunner.manager.findOneOrFail(Order, {
         where: { id: order.id },
-        relations: { ticketType: true, user: true },
+        relations: { ticketType: { concert: true }, user: true },
       });
 
       // Gắn data quan hệ ngược lại vào biến order hiện tại
@@ -196,26 +196,82 @@ export class PaymentService {
       if (emailToSend) {
         const ticketListHtml = tickets.map((t, index) => {
           const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(t.qrCode)}`;
+          
+          let color = "#38BDF8";
+          const zone = (order.ticketType.name || "").toLowerCase();
+          if (zone.includes("svip")) color = "#FF2D20";
+          else if (zone.includes("vip")) color = "#C084FC";
+          else if (zone.includes("sky")) color = "#CCFF00";
+          
+          const accentText = color === "#CCFF00" ? "#000000" : "#ffffff";
+
+          let dateStr = "Đang cập nhật";
+          let timeStr = "19:00";
+          if (order.ticketType.concert?.date) {
+            try {
+              const dObj = new Date(order.ticketType.concert.date);
+              if (!isNaN(dObj.getTime())) {
+                dateStr = dObj.toLocaleDateString("vi-VN");
+                timeStr = dObj.toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' });
+              }
+            } catch (e) {}
+          }
+
           return `
-            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #111111; border: 1px solid #333333; margin-bottom: 24px; border-radius: 0; border-collapse: collapse; overflow: hidden;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #111111; border: 1px solid #333333; border-left: 4px solid ${color}; margin-bottom: 24px; border-radius: 0; border-collapse: collapse; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
               <tr>
                 <!-- Left side: Info -->
-                <td style="padding: 24px; vertical-align: middle; border-right: 2px dashed #333333; width: 70%;">
-                  <div style="color: #CCFF00; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;">Vé #${index + 1}</div>
-                  <div style="color: #ffffff; font-size: 24px; font-weight: 900; text-transform: uppercase; margin-bottom: 8px;">${order.ticketType.name}</div>
-                  <div style="color: #888888; font-size: 14px; margin-bottom: 16px;">Sự kiện: ${order.ticketType.concert?.name || 'Sự kiện âm nhạc'}</div>
+                <td style="padding: 20px; vertical-align: top; width: 70%; border-right: 1px dashed #444444;">
+                  <!-- Concert Name -->
+                  <h3 style="color: #ffffff; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.5px; margin: 0 0 16px 0; line-height: 1.2;">
+                    ${order.ticketType.concert?.name || 'SỰ KIỆN ÂM NHẠC'}
+                  </h3>
                   
-                  <div style="background-color: #000000; display: inline-block; padding: 8px 12px; border-radius: 0; border: 1px solid #222222;">
-                    <div style="color: #555555; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Mã định danh (ID)</div>
-                    <div style="color: #ffffff; font-size: 14px; font-family: monospace, Courier;">${t.qrCode}</div>
-                  </div>
+                  <!-- Details Grid -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 16px;">
+                    <tr>
+                      <td width="50%" style="padding-bottom: 12px;">
+                        <div style="color: #666666; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;">Ngày</div>
+                        <div style="color: #ffffff; font-size: 13px; font-weight: bold;">${dateStr}</div>
+                      </td>
+                      <td width="50%" style="padding-bottom: 12px;">
+                        <div style="color: #666666; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;">Giờ</div>
+                        <div style="color: #ffffff; font-size: 13px; font-weight: bold;">${timeStr}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td width="50%" style="padding-bottom: 12px;">
+                        <div style="color: #666666; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;">Địa điểm</div>
+                        <div style="color: #ffffff; font-size: 13px; font-weight: bold;">${order.ticketType.concert?.venue || 'Đang cập nhật'}</div>
+                      </td>
+                      <td width="50%" style="padding-bottom: 12px;">
+                        <div style="color: #666666; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;">Thành phố</div>
+                        <div style="color: #ffffff; font-size: 13px; font-weight: bold;">${order.ticketType.concert?.city || 'Đang cập nhật'}</div>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <!-- Bottom row: Zone and Price -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="border-top: 1px solid #333333;">
+                    <tr>
+                      <td width="50%" style="padding-top: 16px;">
+                        <div style="color: #666666; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;">Khu vực</div>
+                        <div style="color: ${color}; font-size: 13px; font-weight: bold; text-transform: uppercase;">${order.ticketType.name}</div>
+                      </td>
+                      <td width="50%" style="padding-top: 16px;">
+                        <div style="color: #666666; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 2px;">Giá vé</div>
+                        <div style="color: #ffffff; font-size: 13px; font-weight: bold;">${Number(order.ticketType.price).toLocaleString('vi-VN')}đ</div>
+                      </td>
+                    </tr>
+                  </table>
+                  
                 </td>
                 <!-- Right side: QR Code -->
-                <td width="30%" align="center" style="padding: 24px; vertical-align: middle; background-color: #0a0a0a;">
-                  <div style="background-color: #ffffff; padding: 10px; border-radius: 0; display: inline-block;">
-                    <img src="${qrUrl}" alt="QR Code" width="120" height="120" style="display: block;" />
+                <td width="30%" align="center" style="padding: 20px; vertical-align: middle; background-color: #111111;">
+                  <div style="background-color: #ffffff; padding: 8px; display: inline-block;">
+                    <img src="${qrUrl}" alt="QR Code" width="100" height="100" style="display: block; border: 0;" />
                   </div>
-                  <div style="color: #555555; font-size: 11px; margin-top: 12px; font-weight: bold; text-transform: uppercase;">Quét để vào cổng</div>
+                  <div style="color: #666666; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-top: 12px;">QUÉT QR</div>
                 </td>
               </tr>
             </table>

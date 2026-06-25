@@ -17,11 +17,23 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNext, setShowNext] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSuccess(true);
-    setTimeout(onClose, 1600);
+    setError("");
+    // Kiểm tra xác nhận mật khẩu mới trước khi gọi API
+    if (next !== confirm) {
+      setError("Mật khẩu xác nhận không khớp!");
+      return;
+    }
+    try {
+      await authService.changePassword(current, next);
+      setSuccess(true);
+      setTimeout(onClose, 1600);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Có lỗi xảy ra. Vui lòng thử lại.");
+    }
   }
 
   return (
@@ -42,6 +54,8 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
+            {/* Hiện thị lỗi từ API */}
+            {error && <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 px-3 py-2">{error}</p>}
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-2">Mật khẩu hiện tại</label>
               <div className="relative">
@@ -116,8 +130,21 @@ function DeleteAccountModal({ onClose, onConfirm }: { onClose: () => void; onCon
 }
 
 export default function AccountSettingsPage() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser, isAuthenticated, initialize } = useAuthStore();
   const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  // Auth guard — cùng pattern với /admin/layout.tsx
+  useEffect(() => {
+    initialize();
+    setReady(true);
+  }, [initialize]);
+
+  useEffect(() => {
+    if (ready && !isAuthenticated) {
+      router.replace('/');
+    }
+  }, [ready, isAuthenticated, router]);
 
   const [orders, setOrders] = useState<MyTicketOrder[] | null>(null);
 
@@ -145,23 +172,53 @@ export default function AccountSettingsPage() {
     });
   }
 
-  const [name, setName] = useState(user?.fullName || "Sỹ Văn");
+  const [name, setName] = useState(user?.fullName || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  // Sync lại khi store hydrate xong từ cookie (user thay đổi sau mount)
+  useEffect(() => {
+    if (user?.fullName) setName(user.fullName);
+    if (user?.phone) setPhone(user.phone);
+  }, [user?.fullName, user?.phone]);
 
   const initials = name.trim().split(" ").slice(-1)[0]?.[0]?.toUpperCase() ?? "U";
 
-  function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+  // Gọi API lưu thông tin, cập nhật store + cookie nếu thành công
+  async function handleSave() {
+    setSaveError("");
+    try {
+      const result = await authService.updateProfile(name, phone);
+      updateUser({ fullName: result.user.fullName, phone: result.user.phone });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message || "Lưu thất bại. Vui lòng thử lại.");
+    }
   }
 
-  async function handleLogout() {
-    try { await authService.logout(); } catch(err) {}
+  // Gọi API xoá tài khoản, sau đó clear state và redirect
+  async function handleDeleteAccount() {
+    try {
+      await authService.deleteAccount();
+    } catch (err) { }
     logout();
     router.push("/");
+  }
+
+  // Chờ hydrate store xong — hiện spinner giống admin layout
+  if (!ready || !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#080808]" suppressHydrationWarning>
+        <div className="flex items-center gap-3" suppressHydrationWarning>
+          <div className="w-5 h-5 border-2 border-[#CCFF00] border-t-transparent rounded-full animate-spin" suppressHydrationWarning />
+          <span className="text-sm text-gray-400">Đang kiểm tra đăng nhập...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -233,21 +290,29 @@ export default function AccountSettingsPage() {
                 className={`font-black uppercase tracking-[0.12em] text-xs px-6 py-3 transition-colors ${saved ? "bg-[#CCFF00]/20 text-[#CCFF00]" : "bg-[#CCFF00] text-black hover:bg-white"}`}>
                 {saved ? "✓ Đã lưu thay đổi" : "Lưu thay đổi"}
               </button>
+              {/* Hiện lỗi lưu nếu có */}
+              {saveError && <p className="text-xs text-red-400 mt-2">{saveError}</p>}
             </div>
           </div>
 
-          {/* Security */}
+          {/* Security — ẩn với tài khoản Google OAuth */}
           <div className="bg-[#111] border border-[#333] p-6 mb-3">
             <h2 style={D} className="text-lg font-black uppercase italic mb-5 text-white">Bảo mật</h2>
             <div className="flex items-center justify-between py-2">
               <div>
                 <div className="text-sm font-semibold text-white">Mật khẩu</div>
-                <div className="text-xs text-gray-400 mt-0.5">Thay đổi mật khẩu đăng nhập của bạn</div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  {user?.hasPassword === false
+                    ? "Tài khoản đăng nhập bằng Google — không dùng mật khẩu"
+                    : "Thay đổi mật khẩu đăng nhập của bạn"}
+                </div>
               </div>
-              <button onClick={() => setShowPasswordModal(true)}
-                className="text-[10px] font-black uppercase tracking-[0.15em] border border-[#333] text-gray-400 px-4 py-2 hover:border-[#CCFF00]/40 hover:text-white transition-colors">
-                Đổi mật khẩu
-              </button>
+              {user?.hasPassword !== false && (
+                <button onClick={() => setShowPasswordModal(true)}
+                  className="text-[10px] font-black uppercase tracking-[0.15em] border border-[#333] text-gray-400 px-4 py-2 hover:border-[#CCFF00]/40 hover:text-white transition-colors">
+                  Đổi mật khẩu
+                </button>
+              )}
             </div>
           </div>
 
@@ -263,7 +328,7 @@ export default function AccountSettingsPage() {
         </div>
 
         {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
-        {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} onConfirm={handleLogout} />}
+        {showDeleteModal && <DeleteAccountModal onClose={() => setShowDeleteModal(false)} onConfirm={handleDeleteAccount} />}
       </div>
     </>
   );

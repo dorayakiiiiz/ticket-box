@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { User } from '../entities/user.entity';
 import { Otp } from '../entities/otp.entity';
 import { MailService } from '../mail/mail.service';
@@ -16,6 +17,8 @@ export class AuthService {
   private supabase: SupabaseClient;
 
   constructor(
+    @InjectPinoLogger(AuthService.name)
+    private readonly logger: PinoLogger,
     @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Otp) private otpRepo: Repository<Otp>,
     private jwtService: JwtService,
@@ -30,14 +33,15 @@ export class AuthService {
   }
 
   async signup(email: string, pass: string, fullName?: string) {
-    let user = await this.userRepo.findOne({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+    let user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
     if (user && user.isVerified) {
       throw new BadRequestException('Email đã được đăng ký!');
     }
 
     const hashed = await bcrypt.hash(pass, 10);
     if (!user) {
-      user = this.userRepo.create({ email, password: hashed, fullName, isVerified: false });
+      user = this.userRepo.create({ email: normalizedEmail, password: hashed, fullName, isVerified: false });
       await this.userRepo.save(user);
     } else {
       user.password = hashed;
@@ -50,13 +54,13 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
-    const otp = this.otpRepo.create({ email, code: otpCode, expiresAt });
+    const otp = this.otpRepo.create({ email: normalizedEmail, code: otpCode, expiresAt });
     await this.otpRepo.save(otp);
 
     // Gửi email qua Queue (Bất đồng bộ)
     await this.mailQueue.add('send-otp', {
       type: 'send-otp',
-      to: email,
+      to: normalizedEmail,
       subject: 'Mã xác nhận đăng ký TicketZ',
       html: `<b>Mã OTP của bạn là: <span style="font-size:24px; color:#CCFF00; background:#000; padding:4px 8px;">${otpCode}</span></b>. Mã có hiệu lực trong 5 phút.`,
     }, {
@@ -68,7 +72,8 @@ export class AuthService {
   }
 
   async verifyOtp(email: string, code: string) {
-    const otp = await this.otpRepo.findOne({ where: { email }, order: { createdAt: 'DESC' } });
+    const normalizedEmail = email.trim().toLowerCase();
+    const otp = await this.otpRepo.findOne({ where: { email: normalizedEmail }, order: { createdAt: 'DESC' } });
     if (!otp || otp.code !== code) {
       throw new BadRequestException('Mã OTP không hợp lệ!');
     }
@@ -76,7 +81,7 @@ export class AuthService {
       throw new BadRequestException('Mã OTP đã hết hạn!');
     }
 
-    const user = await this.userRepo.findOne({ where: { email } });
+    const user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
     if (!user) throw new BadRequestException('User not found');
 
     user.isVerified = true;
@@ -84,11 +89,12 @@ export class AuthService {
     await this.otpRepo.delete({ email });
 
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, hasPassword: !!user.password } };
   }
 
   async login(email: string, pass: string) {
-    const user = await this.userRepo.findOne({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
     if (!user || !user.isVerified || !user.password) {
       throw new UnauthorizedException('Tài khoản không tồn tại hoặc chưa xác thực!');
     }
@@ -98,7 +104,7 @@ export class AuthService {
     }
 
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, hasPassword: true } };
   }
 
 
@@ -146,10 +152,11 @@ export class AuthService {
 
     // Trả về JWT của hệ thống TicketBox
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, hasPassword: false } };
   }
   async forgotPassword(email: string) {
-    const user = await this.userRepo.findOne({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
     if (!user) {
       throw new BadRequestException('Email không tồn tại trong hệ thống!');
     }
@@ -162,13 +169,13 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
-    const otp = this.otpRepo.create({ email, code: otpCode, expiresAt });
+    const otp = this.otpRepo.create({ email: normalizedEmail, code: otpCode, expiresAt });
     await this.otpRepo.save(otp);
 
     // Gửi email qua Queue (Bất đồng bộ)
     await this.mailQueue.add('send-otp', {
       type: 'send-otp',
-      to: email,
+      to: normalizedEmail,
       subject: 'Khôi phục mật khẩu TicketZ',
       html: `<b>Mã OTP khôi phục mật khẩu của bạn là: <span style="font-size:24px; color:#CCFF00; background:#000; padding:4px 8px;">${otpCode}</span></b>. Mã có hiệu lực trong 5 phút. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.`,
     }, {
@@ -180,11 +187,12 @@ export class AuthService {
   }
 
   async resetPassword(email: string, code: string, newPassword?: string) {
+    const normalizedEmail = email.trim().toLowerCase();
     if (!newPassword) {
       throw new BadRequestException('Vui lòng cung cấp mật khẩu mới!');
     }
 
-    const otp = await this.otpRepo.findOne({ where: { email }, order: { createdAt: 'DESC' } });
+    const otp = await this.otpRepo.findOne({ where: { email: normalizedEmail }, order: { createdAt: 'DESC' } });
     if (!otp || otp.code !== code) {
       throw new BadRequestException('Mã OTP không hợp lệ!');
     }
@@ -192,7 +200,7 @@ export class AuthService {
       throw new BadRequestException('Mã OTP đã hết hạn!');
     }
 
-    const user = await this.userRepo.findOne({ where: { email } });
+    const user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
     if (!user) throw new BadRequestException('User not found');
 
     const hashed = await bcrypt.hash(newPassword, 10);
@@ -201,5 +209,57 @@ export class AuthService {
     await this.otpRepo.delete({ email });
 
     return { message: 'Mật khẩu đã được khôi phục thành công. Vui lòng đăng nhập lại.' };
+  }
+
+  // Cập nhật họ tên và số điện thoại của user đang đăng nhập
+  async updateProfile(userId: string, fullName?: string, phone?: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Người dùng không tồn tại!');
+
+    if (fullName !== undefined) user.fullName = fullName;
+    if (phone !== undefined) user.phone = phone;
+    await this.userRepo.save(user);
+
+    return {
+      message: 'Cập nhật thông tin thành công.',
+      user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, role: user.role, hasPassword: !!user.password },
+    };
+  }
+
+  // Đổi mật khẩu — kiểm tra mật khẩu hiện tại trước, không cho phép tài khoản OAuth
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Người dùng không tồn tại!');
+
+    if (!user.password) {
+      throw new BadRequestException('Tài khoản Google không sử dụng mật khẩu.');
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không đúng!');
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    await this.userRepo.save(user);
+
+    return { message: 'Đổi mật khẩu thành công.' };
+  }
+
+  // Soft delete: vô hiệu hoá tài khoản, giữ lại Order/Ticket lịch sử
+  async deleteAccount(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Người dùng không tồn tại!');
+
+    // Dùng update() để SET NULL trực tiếp trên DB — không cần gán null lên object entity
+    await this.userRepo.update(userId, {
+      fullName: null,
+      phone: null,
+      password: null,
+      email: `deleted_${userId}@deleted.local`,
+    } as any);
+    await this.userRepo.softDelete(userId);
+
+    return { message: 'Tài khoản đã được xoá.' };
   }
 }

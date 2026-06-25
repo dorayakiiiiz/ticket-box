@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, UploadedFile, UseInterceptors, BadRequestException, HttpCode, HttpStatus, Header } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req, Query, UploadedFile, UseInterceptors, BadRequestException, HttpCode, HttpStatus, Header } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ConcertService } from './concert.service';
-import { CreateConcertDto, UpdateConcertDto } from './dto/concert.dto';
+import { CreateConcertDto, UpdateConcertDto, GetConcertsQueryDto } from './dto/concert.dto';
 import { CreateTicketTypeDto, UpdateTicketTypeDto } from './dto/ticket-type.dto';
 import { Public } from 'src/common/guards/jwt.strategy';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -26,8 +26,9 @@ export class ConcertController {
 
   @Public()
   @Get()
-  findAll() {
-    return this.concertService.findAll();
+  findAll(@Query() query: GetConcertsQueryDto) {
+    // DTO đã validate và transform (page/limit → number) qua ValidationPipe
+    return this.concertService.findAll(query);
   }
 
   @Public()

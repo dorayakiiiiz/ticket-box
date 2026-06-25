@@ -88,8 +88,44 @@ export class ConcertService implements OnApplicationBootstrap {
 
   // ─── CRUD ────────────────────────────────────────────────────────────────────
 
-  findAll() {
-    return this.concertRepo.find({ relations: { ticketTypes: true } });
+  // Trả paginated khi có page/limit, trả hết khi không — backward compatible với public ISR
+  async findAll(options?: { page?: number; limit?: number; search?: string; status?: string; city?: string }) {
+    const { page, limit, search, status, city } = options || {};
+
+    // Public page (ISR) gọi không truyền params → trả toàn bộ
+    if (!page || !limit) {
+      return this.concertRepo.find({ relations: { ticketTypes: true } });
+    }
+
+    const qb = this.concertRepo.createQueryBuilder('concert')
+      .leftJoinAndSelect('concert.ticketTypes', 'ticketType')
+      .orderBy('concert.createdAt', 'DESC')
+      .take(limit)
+      .skip((page - 1) * limit);
+
+    if (search) {
+      qb.andWhere(
+        '(concert.name ILIKE :search OR concert.city ILIKE :search OR concert.venue ILIKE :search OR concert.subtitle ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Lọc theo trạng thái — khớp chính xác enum
+    if (status) {
+      qb.andWhere('concert.status = :status', { status });
+    }
+
+    // Lọc theo thành phố — ILIKE để không phân biệt hoa/thường
+    if (city) {
+      qb.andWhere('concert.city ILIKE :city', { city: `%${city}%` });
+    }
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   async findOne(id: string) {

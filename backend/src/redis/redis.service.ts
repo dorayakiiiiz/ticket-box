@@ -1,28 +1,9 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import * as fs from 'fs';
+import * as path from 'path';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-
-const BOOK_TICKET_LUA = `
-local ticket_key = KEYS[1]
-local user_limit_key = KEYS[2]
-local qty = tonumber(ARGV[1])
-local max_per_user = tonumber(ARGV[2])
-
-local user_bought = tonumber(redis.call('GET', user_limit_key) or '0')
-if (user_bought + qty) > max_per_user then
-    return 'LIMIT_EXCEEDED'
-end
-
-local available = tonumber(redis.call('GET', ticket_key) or '0')
-if available < qty then
-    return 'SOLD_OUT'
-end
-
-redis.call('DECRBY', ticket_key, qty)
-redis.call('INCRBY', user_limit_key, qty)
-return 'SUCCESS'
-`;
 
 /**
  * RedisService — trung tâm xử lý Redis cho toàn bộ Phase 3
@@ -38,6 +19,8 @@ return 'SUCCESS'
 export class RedisService implements OnModuleInit {
   // SHA hash của Lua script — dùng EVALSHA thay vì EVAL để tiết kiệm bandwidth
   private bookTicketScriptSha: string;
+  // Lưu nội dung script để fallback khi bị lỗi NOSCRIPT
+  private bookTicketScriptContent: string;
 
   constructor(
     @InjectPinoLogger(RedisService.name)
@@ -49,7 +32,9 @@ export class RedisService implements OnModuleInit {
   // Redis trả về SHA1 hash — sau đó dùng EVALSHA (nhanh hơn EVAL)
   async onModuleInit() {
     try {
-      this.bookTicketScriptSha = await this.redis.script('LOAD', BOOK_TICKET_LUA) as string;
+      const scriptPath = path.join(__dirname, 'lua', 'book-ticket.lua');
+      this.bookTicketScriptContent = fs.readFileSync(scriptPath, 'utf8');
+      this.bookTicketScriptSha = await this.redis.script('LOAD', this.bookTicketScriptContent) as string;
       this.logger.info('Lua script [book-ticket] loaded successfully');
     } catch (err) {
       // Không block server start — nhưng booking sẽ fail nếu script chưa load
@@ -82,14 +67,14 @@ export class RedisService implements OnModuleInit {
       if (err.message && err.message.includes('NOSCRIPT')) {
         this.logger.warn('NOSCRIPT caught, falling back to EVAL and re-loading script...');
         const result = await this.redis.eval(
-          BOOK_TICKET_LUA,
+          this.bookTicketScriptContent,
           2,
           ticketKey, userLimitKey,
           quantity, maxPerUser,
         ) as string;
         
         // Cố gắng re-load script vào cache Redis cho các lần sau
-        this.bookTicketScriptSha = await this.redis.script('LOAD', BOOK_TICKET_LUA) as string;
+        this.bookTicketScriptSha = await this.redis.script('LOAD', this.bookTicketScriptContent) as string;
         return result;
       }
       throw err;

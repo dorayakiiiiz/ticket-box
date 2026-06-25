@@ -34,6 +34,7 @@ export default function Navbar() {
     try { await authService.logout(); } catch(err) {}
     logout();
     setOpen(false);
+    router.push("/");
   }
 
   return (

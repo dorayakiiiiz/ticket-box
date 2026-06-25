@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsOptional, IsDateString, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDateString, IsEnum, IsInt, IsIn, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ConcertStatus } from '../../entities/concert.entity';
 
 export class CreateConcertDto {
@@ -63,4 +64,35 @@ export class UpdateConcertDto {
   @IsOptional()
   status?: ConcertStatus;
 
+}
+
+// DTO validate query params cho GET /concerts
+export class GetConcertsQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'page phải là số nguyên' })
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ message: 'limit phải là số nguyên' })
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsIn(
+    ['UPCOMING', 'ONGOING', 'COMPLETED', 'CANCELLED'],
+    { message: 'status không hợp lệ' },
+  )
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
 }
