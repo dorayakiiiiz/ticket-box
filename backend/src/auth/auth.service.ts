@@ -89,7 +89,7 @@ export class AuthService {
     await this.otpRepo.delete({ email });
 
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, hasPassword: !!user.password } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, hasPassword: !!user.password } };
   }
 
   async login(email: string, pass: string) {
@@ -104,7 +104,7 @@ export class AuthService {
     }
 
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, hasPassword: true } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, role: user.role, hasPassword: true } };
   }
 
   async supabaseOAuthLogin(supabaseToken: string) {
@@ -127,7 +127,7 @@ export class AuthService {
 
     // Trả về JWT của hệ thống TicketBox
     const token = this.jwtService.sign({ id: user.id, role: user.role });
-    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, hasPassword: false } };
+    return { token, user: { id: user.id, email: user.email, fullName: user.fullName, phone: user.phone, role: user.role, hasPassword: false } };
   }
   async forgotPassword(email: string) {
     const normalizedEmail = email.trim().toLowerCase();

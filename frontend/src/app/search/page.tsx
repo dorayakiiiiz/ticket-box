@@ -193,11 +193,9 @@ function SearchResultsContent() {
 export default function SearchResultsPage() {
   return (
     <>
-      <Navbar />
       <Suspense fallback={<div className="min-h-screen bg-[#080808] pt-14" />}>
         <SearchResultsContent />
       </Suspense>
-      <Footer />
     </>
   );
 }

@@ -84,17 +84,17 @@ function AdminUserModal({ user, onClose, onSuccess }: { user?: UserData; onClose
               placeholder="Nhập địa chỉ email"
               className={`w-full border border-gray-200 text-gray-900 text-sm px-4 py-3 outline-none ${isEdit ? 'bg-gray-50 cursor-not-allowed' : 'focus:border-gray-400 transition-colors'}`} />
           </div>
-          
+
           {!isEdit && (
             <>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 mb-2">Mật khẩu *</label>
                 <div className="relative">
-                  <input 
+                  <input
                     type={showPw ? "text" : "password"}
-                    value={password} 
+                    value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full border border-gray-200 text-gray-900 text-sm px-4 pr-10 py-3 outline-none focus:border-gray-400 transition-colors" 
+                    className="w-full border border-gray-200 text-gray-900 text-sm px-4 pr-10 py-3 outline-none focus:border-gray-400 transition-colors"
                     placeholder="Nhập mật khẩu"
                   />
                   <button onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -104,11 +104,11 @@ function AdminUserModal({ user, onClose, onSuccess }: { user?: UserData; onClose
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 mb-2">Nhập lại mật khẩu *</label>
-                <input 
+                <input
                   type="password"
-                  value={confirmPassword} 
+                  value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  className="w-full border border-gray-200 text-gray-900 text-sm px-4 py-3 outline-none focus:border-gray-400 transition-colors" 
+                  className="w-full border border-gray-200 text-gray-900 text-sm px-4 py-3 outline-none focus:border-gray-400 transition-colors"
                   placeholder="Xác nhận mật khẩu"
                 />
               </div>
@@ -357,7 +357,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 overflow-hidden relative min-h-[400px]">
+      <div className="bg-white border border-gray-200 relative min-h-[400px]">
         {/* Toolbar: Search */}
         <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center">
           <div className="relative w-full max-w-sm">
@@ -379,11 +379,11 @@ export default function AdminUsersPage() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="w-full">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">ID</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">STT</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Họ tên</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Vai trò</th>
@@ -399,11 +399,11 @@ export default function AdminUsersPage() {
                   </td>
                 </tr>
               ) : (
-                users.map(user => {
+                users.map((user, index) => {
                   return (
                     <tr key={user.id} className={`hover:bg-gray-50`}>
-                      <td className="px-6 py-4 text-sm font-mono font-semibold text-gray-900" title={user.id}>
-                        #{user.id.substring(0, 8)}...
+                      <td className="px-6 py-4 text-sm font-semibold text-gray-900" title={user.id}>
+                        {(currentPage - 1) * meta.limit + index + 1}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -424,7 +424,7 @@ export default function AdminUsersPage() {
                             <MoreVertical size={16} />
                           </button>
                           {openMenuId === user.id && (
-                            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 shadow-lg z-50">
+                            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 shadow-lg z-[100]">
                               <button onClick={() => { setEditModal(user); setOpenMenuId(null); }}
                                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left">
                                 <Edit size={13} className="text-gray-400" /> Đổi thông tin
@@ -471,8 +471,8 @@ export default function AdminUsersPage() {
                 key={p}
                 onClick={() => setCurrentPage(p)}
                 className={`flex items-center justify-center w-8 h-8 border text-sm font-medium transition-colors ${p === currentPage
-                    ? "border-gray-900 bg-gray-900 text-white"
-                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                   }`}
               >
                 {p}
