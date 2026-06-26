@@ -27,7 +27,7 @@ import { CronService } from './cron.service';
   imports: [
     TypeOrmModule.forFeature([TicketType, Order, Concert]),
     BullModule.registerQueue({ name: 'ticketbox.order' }),
-    BullModule.registerQueue({ name: 'mail-queue' }),
+    BullModule.registerQueue({ name: 'notification-queue' }),
     TicketRedisModule,
   ],
   controllers: [BookingController],

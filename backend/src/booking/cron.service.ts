@@ -28,7 +28,7 @@ export class CronService {
     private readonly logger: PinoLogger,
     private readonly dataSource: DataSource,
     private readonly redisService: RedisService,
-    @InjectQueue('mail-queue') private readonly mailQueue: Queue,
+    @InjectQueue('notification-queue') private readonly notificationQueue: Queue,
   ) {}
 
   /**
@@ -235,26 +235,21 @@ export class CronService {
 
           if (!email) continue;
 
-          await this.mailQueue.add('send-reminder', {
-            type: 'send-reminder',
-            to: email,
-            subject: `[Nhắc nhở] Sự kiện ${concert.name} sắp diễn ra!`,
-            html: `
-              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #333; background: #0a0a0a; color: #fff; padding: 20px;">
-                <h1 style="color: #CCFF00; text-transform: uppercase;">TicketZ Reminder</h1>
-                <p>Xin chào ${name},</p>
-                <p>Sự kiện <b>${concert.name}</b> sẽ diễn ra trong vòng chưa đầy 24 giờ nữa. Bạn đã chuẩn bị sẵn sàng chưa?</p>
-                <p><b>Thời gian:</b> ${concert.date.toLocaleString('vi-VN')}</p>
-                <p><b>Địa điểm:</b> ${concert.venue}, ${concert.city}</p>
-                <p>Vui lòng chuẩn bị sẵn mã QR vé điện tử (trong email nhận vé hoặc lịch sử mua vé) để check-in tại sự kiện.</p>
-                <br />
-                <p>Hẹn gặp bạn tại đêm diễn!</p>
-                <p style="color: #CCFF00;"><b>TicketZ Team</b></p>
-              </div>
-            `,
-          }, {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2000 },
+          await this.notificationQueue.add('send-reminder', {
+            channel: 'EMAIL',
+            recipient: { 
+              email: email, 
+              phone: order.guestPhone || order.user?.phone, 
+              name: name 
+            },
+            templateId: 'send-reminder',
+            data: {
+              guestName: name,
+              concertName: concert.name,
+              eventDate: concert.date.toLocaleString('vi-VN'),
+              venue: concert.venue,
+              city: concert.city
+            },
           });
 
           sentCount++;

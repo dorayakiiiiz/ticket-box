@@ -25,7 +25,7 @@ import { Ticket } from './entities/ticket.entity';
 import { Guest } from './entities/guest.entity';
 import { PaymentModule } from './payment/payment.module';
 import { TicketModule } from './ticket/ticket.module';
-import { MailModule } from './mail/mail.module';
+import { NotificationModule } from './notification/notification.module';
 import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
@@ -129,7 +129,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     BookingModule,
     PaymentModule,
     TicketModule,
-    MailModule,
+    NotificationModule,
     AdminModule,
     ScheduleModule.forRoot(),
   ],

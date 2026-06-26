@@ -117,7 +117,7 @@ export default function HeroCarousel({ concerts }: { concerts: Concert[] }) {
               {s.status === "UPCOMING" ? "SẮP DIỄN RA" : s.status}
             </span>
             <span className="text-[10px] md:text-xs font-mono tracking-[0.15em] text-white/35 uppercase">
-              Sự kiện nổi bật
+              Đáng chú ý
             </span>
           </div>
 

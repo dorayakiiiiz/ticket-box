@@ -15,11 +15,12 @@ type FormState = {
   venue: string;
   city: string;
   date: string;
+  openTime: string;
   coverImageUrl: string;
 };
 
 const EMPTY_FORM: FormState = {
-  name: '', subtitle: '', description: '', venue: '', city: '', date: '', coverImageUrl: '',
+  name: '', subtitle: '', description: '', venue: '', city: '', date: '', openTime: '', coverImageUrl: '',
 };
 
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
@@ -89,6 +90,7 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         venue: concert.venue,
         city: concert.city,
         date: concert.date ? new Date(concert.date).toISOString().slice(0, 16) : '',
+        openTime: concert.openTime ? new Date(concert.openTime).toISOString().slice(0, 16) : '',
         coverImageUrl: concert.coverImageUrl ?? '',
       });
       setTicketTypes(concert.ticketTypes ?? []);
@@ -186,6 +188,7 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         venue: form.venue,
         city: form.city,
         date: form.date,
+        openTime: form.openTime,
         coverImageUrl: form.coverImageUrl || undefined,
       };
       if (mode === 'edit' && concert) {
@@ -286,6 +289,12 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
                 </p>
               </div>
               <div>
+                <label className={labelCls}>Mở bán lúc</label>
+                <p className="text-sm text-gray-900">
+                  {new Date(concert.openTime).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              <div>
                 <label className={labelCls}>Giờ diễn</label>
                 <p className="text-sm text-gray-900">
                   {new Date(concert.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
@@ -368,9 +377,15 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
             </div>
 
             {/* Row 3 — Date */}
-            <div>
-              <label className={labelCls}>Ngày giờ diễn *</label>
-              <input type="datetime-local" required value={form.date} onChange={set('date')} className={inputCls} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>Mở bán vé lúc *</label>
+                <input type="datetime-local" required value={form.openTime} onChange={set('openTime')} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Ngày giờ diễn *</label>
+                <input type="datetime-local" required value={form.date} onChange={set('date')} className={inputCls} />
+              </div>
             </div>
 
             {/* Row 4 — Description */}

@@ -1,6 +1,6 @@
-import { IMailStrategy } from '../interfaces/mail-strategy.interface';
+import { IMailStrategy } from './mail-strategy.interface';
 import * as SibApiV3Sdk from 'sib-api-v3-sdk';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { PinoLogger } from 'nestjs-pino';
 
 export class BrevoStrategy implements IMailStrategy {
   private apiInstance: any;
@@ -31,7 +31,7 @@ export class BrevoStrategy implements IMailStrategy {
       const data = await this.apiInstance.sendTransacEmail(sendSmtpEmail);
       this.logger.info(`Brevo: Email sent successfully to ${to}. Message ID: ${data.messageId}`);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         { err: error.response ? error.response.body : error },
         `Brevo: Failed to send email to ${to}`,

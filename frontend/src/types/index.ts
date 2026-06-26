@@ -21,6 +21,7 @@ export type Concert = {
   city: string;
   date: string;
   coverImageUrl: string | null;
+  openTime: string;
   status: ConcertStatus;
   aiStatus: AiStatus;
   ticketTypes: TicketType[];

@@ -8,7 +8,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { User } from '../entities/user.entity';
 import { Otp } from '../entities/otp.entity';
-import { MailService } from '../mail/mail.service';
 import { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
 
@@ -23,7 +22,7 @@ export class AuthService {
     @InjectRepository(Otp) private otpRepo: Repository<Otp>,
     private jwtService: JwtService,
     private configService: ConfigService,
-    @InjectQueue('mail-queue') private mailQueue: Queue,
+    @InjectQueue('notification-queue') private notificationQueue: Queue,
   ) {
     // Cấu hình Supabase client để verify token nếu cần
     this.supabase = createClient(
@@ -58,11 +57,11 @@ export class AuthService {
     await this.otpRepo.save(otp);
 
     // Gửi email qua Queue (Bất đồng bộ)
-    await this.mailQueue.add('send-otp', {
-      type: 'send-otp',
-      to: normalizedEmail,
-      subject: 'Mã xác nhận đăng ký TicketZ',
-      html: `<b>Mã OTP của bạn là: <span style="font-size:24px; color:#CCFF00; background:#000; padding:4px 8px;">${otpCode}</span></b>. Mã có hiệu lực trong 5 phút.`,
+    await this.notificationQueue.add('send-otp', {
+      channel: 'EMAIL',
+      recipient: { email: normalizedEmail },
+      templateId: 'send-otp',
+      data: { otpCode },
     }, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 1000 },
@@ -148,11 +147,11 @@ export class AuthService {
     await this.otpRepo.save(otp);
 
     // Gửi email qua Queue (Bất đồng bộ)
-    await this.mailQueue.add('send-otp', {
-      type: 'send-otp',
-      to: normalizedEmail,
-      subject: 'Khôi phục mật khẩu TicketZ',
-      html: `<b>Mã OTP khôi phục mật khẩu của bạn là: <span style="font-size:24px; color:#CCFF00; background:#000; padding:4px 8px;">${otpCode}</span></b>. Mã có hiệu lực trong 5 phút. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.`,
+    await this.notificationQueue.add('send-otp', {
+      channel: 'EMAIL',
+      recipient: { phone: normalizedEmail },
+      templateId: 'forgot-password',
+      data: { otpCode },
     }, {
       attempts: 3,
       backoff: { type: 'exponential', delay: 1000 },

@@ -37,6 +37,10 @@ export default function CheckoutPage() {
       try {
         const data = await concertService.getById(concertId);
         if (data) {
+          if (data.openTime && new Date() < new Date(data.openTime)) {
+            router.push(`/concert/${concertId}`);
+            return;
+          }
           setConcert(data);
           const tt = data.ticketTypes.find(t => t.id === ticketTypeId);
           if (tt) setTicketType(tt);

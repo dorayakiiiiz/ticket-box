@@ -9,7 +9,7 @@ import { Order } from '../entities/order.entity';
 import { Ticket } from '../entities/ticket.entity';
 import { TicketType } from '../entities/ticket-type.entity';
 
-import { MailModule } from '../mail/mail.module';
+import { NotificationModule } from '../notification/notification.module';
 
 /**
  * PaymentModule — Module thanh toán Phase 4
@@ -25,7 +25,7 @@ import { MailModule } from '../mail/mail.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, Ticket, TicketType]),
-    MailModule,
+    NotificationModule,
   ],
   controllers: [PaymentController],
   providers: [
