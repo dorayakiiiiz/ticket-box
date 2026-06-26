@@ -133,8 +133,14 @@ export default function SeatMapPage() {
   // Fetch concert data (tên, venue, date, ticketTypes) từ Postgres
   useEffect(() => {
     if (!id) return;
-    concertService.getById(id).then(setConcert).catch(() => { });
-  }, [id]);
+    concertService.getById(id).then((c) => {
+      if (c.openTime && new Date() < new Date(c.openTime)) {
+        router.push(`/concert/${id}`);
+      } else {
+        setConcert(c);
+      }
+    }).catch(() => { });
+  }, [id, router]);
 
   // SWR poll availability mỗi 5s — cập nhật số vé real-time từ Redis
   const { data: availability } = useSWR<ConcertAvailability>(

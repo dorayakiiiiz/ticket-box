@@ -33,6 +33,9 @@ export class Concert {
   @Column()
   date: Date;
 
+  @Column()
+  openTime: Date;
+
   @Column({ nullable: true })
   coverImageUrl: string;
 

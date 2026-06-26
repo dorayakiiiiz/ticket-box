@@ -1,6 +1,6 @@
 import * as nodemailer from 'nodemailer';
-import { IMailStrategy } from '../interfaces/mail-strategy.interface';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { IMailStrategy } from './mail-strategy.interface';
+import { PinoLogger } from 'nestjs-pino';
 
 export class NodemailerStrategy implements IMailStrategy {
   private transporter;

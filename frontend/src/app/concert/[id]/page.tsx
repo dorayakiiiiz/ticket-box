@@ -172,7 +172,7 @@ export default async function EventDetailPage({
               </div>
 
               {/* BookingButton — Client Component nhỏ vì cần router.push */}
-              <BookingButton concertId={concert.id} />
+              <BookingButton concertId={concert.id} openTime={concert.openTime} />
 
 
             </div>

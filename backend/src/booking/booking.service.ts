@@ -61,6 +61,10 @@ export class BookingService {
       throw new NotFoundException('Concert của loại vé này không tồn tại');
     }
 
+    if (ticketType.concert.openTime && new Date() < new Date(ticketType.concert.openTime)) {
+      throw new BadRequestException('Sự kiện chưa đến thời gian mở bán vé');
+    }
+
     const eventId = ticketType.concert.id;
     const maxPerUser = ticketType.maxPerUser;
 

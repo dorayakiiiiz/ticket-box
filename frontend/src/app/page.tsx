@@ -38,19 +38,16 @@ export default async function HomePage() {
             <div className="flex items-center gap-2 mb-2">
               <div className="w-5 h-px bg-[#CCFF00]" />
               <span className="text-[10px] md:text-xs font-mono tracking-[0.2em] text-[#CCFF00] uppercase">
-                Sự Kiện
+                Highlight
               </span>
             </div>
             <h2
               style={D}
               className="text-4xl font-black uppercase italic tracking-tight"
             >
-              TẤT CẢ SỰ KIỆN
+              SỰ KIỆN NỔI BẬT
             </h2>
           </div>
-          <button className="hidden md:flex items-center gap-1 text-[11px] md:text-xs font-semibold text-gray-400 hover:text-[#CCFF00] uppercase tracking-widest transition-colors">
-            Xem tất cả <ArrowRight size={12} />
-          </button>
         </div>
 
         {concerts.length > 0 ? (
@@ -105,7 +102,7 @@ export default async function HomePage() {
           </div>
           <div className="flex flex-col gap-3 shrink-0">
             <Link href="/" className="border border-white/30 text-white font-semibold uppercase tracking-[0.12em] text-xs md:text-sm px-10 py-4 hover:border-white transition-colors flex items-center gap-2 justify-center">
-              KHÁM PHÁ SỰ KIỆN <ArrowRight size={14} />
+              ĐẶT VÉ NGAY <ArrowRight size={14} />
             </Link>
           </div>
         </div>
