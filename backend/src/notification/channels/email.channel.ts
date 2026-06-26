@@ -17,11 +17,18 @@ export class EmailChannel implements INotificationChannel, OnModuleInit {
   ) {}
 
   onModuleInit() {
-    const provider = this.configService.get<string>('MAIL_PROVIDER', 'nodemailer').toLowerCase();
+    const rawProvider = this.configService.get<string>('MAIL_PROVIDER');
+    this.logger.info(`[EmailChannel Debug] Raw MAIL_PROVIDER from config: '${rawProvider}' (Length: ${rawProvider?.length})`);
+    
+    const provider = (rawProvider || 'nodemailer').trim().toLowerCase();
+    this.logger.info(`[EmailChannel Debug] Processed provider: '${provider}'`);
 
     if (provider === 'brevo') {
       const apiKey = this.configService.get<string>('BREVO_API_KEY');
       const senderEmail = this.configService.get<string>('EMAIL_USER');
+      
+      this.logger.info(`[EmailChannel Debug] BREVO_API_KEY exists: ${!!apiKey}, Length: ${apiKey?.length}`);
+
       if (!apiKey) {
         this.logger.warn('Brevo strategy selected but BREVO_API_KEY is missing. Falling back to Nodemailer.');
         this.initNodemailer();
