@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'concert_selection_screen.dart';
+import 'scanner_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -62,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success) {
       // Đăng nhập thành công
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const ConcertSelectionScreen()),
+        MaterialPageRoute(builder: (_) => const ScannerScreen()),
       );
     } else {
       // Hiển thị lỗi

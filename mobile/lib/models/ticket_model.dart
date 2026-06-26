@@ -4,6 +4,7 @@ class TicketModel {
   final String status;
   final String? checkedInAt;
   final bool synced;
+  final String? updatedAt;
 
   TicketModel({
     required this.id,
@@ -11,16 +12,24 @@ class TicketModel {
     required this.status,
     this.checkedInAt,
     this.synced = false,
+    this.updatedAt,
   });
 
   // Từ JSON (API) → Object
   factory TicketModel.fromJson(Map<String, dynamic> json) {
+    // Chuyển đổi status từ API sang local
+    String localStatus = json['status'] as String? ?? 'UNKNOWN';
+    if (localStatus == 'USED') {
+      localStatus = 'CHECKED_IN';
+    }
+
     return TicketModel(
       id: json['id'] as String? ?? '',
       qrCode: json['qrPayload'] as String? ?? '',
-      status: json['status'] as String? ?? 'UNKNOWN',
+      status: localStatus,
       checkedInAt: json['checkedInAt'] as String?,
       synced: json['synced'] as bool? ?? false,
+      updatedAt: json['updatedAt'] as String?,
     );
   }
 
@@ -32,6 +41,7 @@ class TicketModel {
       status: map['status'] as String? ?? 'UNKNOWN',
       checkedInAt: map['checkedInAt'] as String?,
       synced: map['synced'] == 1,
+      updatedAt: map['updatedAt'] as String?,
     );
   }
 
@@ -43,6 +53,7 @@ class TicketModel {
       'status': status,
       'checkedInAt': checkedInAt,
       'synced': synced ? 1 : 0,
+      'updatedAt': updatedAt ?? DateTime.now().toIso8601String(),
     };
   }
 }

@@ -10,8 +10,8 @@ class ConcertRepository {
   Future<List<ConcertModel>> getConcerts() async {
     final cachedConcerts = await _dbHelper.getConcerts();
     try {
-      final apiConcerts = await _apiService.fetchConcerts(); //Lấy danh sách từ API
-      await _dbHelper.clearAllConcerts(); //Xóa danh sách concert hiện có trong cache
+      final apiConcerts = await _apiService.fetchConcerts();
+      await _dbHelper.clearAllConcerts();
       await _dbHelper.saveConcerts(apiConcerts); //cập nhật cache mới phòng khi mất mạng có thể sử dụng
       return apiConcerts;
     } catch (e) {

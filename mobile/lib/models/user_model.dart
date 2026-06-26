@@ -22,15 +22,10 @@ class UserModel {
   }
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'email': email,
-      'fullName': fullName,
-      'role': role,
-    };
+    return {'id': id, 'email': email, 'fullName': fullName, 'role': role};
   }
 
-  // 👇 THÊM HÀM NÀY để đọc từ SQLite
+  // THÊM HÀM NÀY để đọc từ SQLite
   // Từ Map (database) → Object
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
