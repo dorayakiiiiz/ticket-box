@@ -201,7 +201,7 @@ export default function CheckoutPage() {
               <div className="bg-[#0a0a0a] border border-[#222] p-5 mb-3">
                 <div className="text-[10px] md:text-xs font-mono tracking-[0.2em] text-gray-500 uppercase mb-3">Thông tin đặt vé</div>
                 <div style={D} className="text-xl font-black uppercase italic mb-1">{concert.name}</div>
-                <div className="text-[11px] md:text-xs text-gray-400 mb-4">{dateStr} · {timeStr} · {concert.venue}</div>
+                <div className="text-[11px] md:text-xs font-light text-gray-400 mb-4">{dateStr} - {timeStr} - {concert.venue}</div>
                 <div className="border-t border-[#333] pt-4 flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div><div className="text-sm md:text-base font-bold">{ticketType.name}</div><div className="text-[10px] md:text-xs text-gray-500">x{qty}</div></div>

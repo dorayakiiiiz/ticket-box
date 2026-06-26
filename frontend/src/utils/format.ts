@@ -1,3 +1,3 @@
-export function fmt(n: number) {
-  return n.toLocaleString("vi-VN");
+export function fmt(n: number | string) {
+  return Number(n).toLocaleString("vi-VN");
 }
