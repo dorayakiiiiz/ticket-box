@@ -162,4 +162,41 @@ export const adminService = {
     const res = await apiClient.delete(`/admin/users/${id}`);
     return res.data;
   },
+
+  // ─── Guest Management ────────────────────────────────────────────────────────
+
+  getGuests: async (page = 1, limit = 10, search = '') => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      ...(search ? { search } : {}),
+    });
+    const res = await apiClient.get(`/guests?${params}`);
+    return res.data;
+  },
+
+  createGuest: async (payload: { fullName: string; email?: string; phone?: string; concertId: string }) => {
+    const res = await apiClient.post('/guests', payload);
+    return res.data;
+  },
+
+  updateGuest: async (id: string, payload: { fullName?: string; email?: string; phone?: string; isCheckedIn?: boolean }) => {
+    const res = await apiClient.patch(`/guests/${id}`, payload);
+    return res.data;
+  },
+
+  deleteGuest: async (id: string) => {
+    const res = await apiClient.delete(`/guests/${id}`);
+    return res.data;
+  },
+
+  importGuestsCSV: async (concertId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post(`/guests/import-csv/${concertId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60_000,
+    });
+    return res.data;
+  },
 };

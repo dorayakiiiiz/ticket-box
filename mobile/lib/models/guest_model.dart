@@ -1,33 +1,31 @@
 class GuestModel {
   final String id;
-  final String name;
+  final String guestCode;
+  final String fullName;
   final String email;
-  final String qrCode;
-  final String status;
-  final DateTime? checkedInAt;
+  final String phone;
+  final bool isCheckedIn;
   final bool synced;
 
   GuestModel({
     required this.id,
-    required this.name,
+    required this.guestCode,
+    required this.fullName,
     required this.email,
-    required this.qrCode,
-    required this.status,
-    this.checkedInAt,
+    this.phone = '',
+    this.isCheckedIn = false,
     this.synced = false,
   });
 
   // 1. Từ JSON (API) → Object
   factory GuestModel.fromJson(Map<String, dynamic> json) {
     return GuestModel(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      qrCode: json['qrCode'],
-      status: json['status'],
-      checkedInAt: json['checkedInAt'] != null 
-          ? DateTime.parse(json['checkedInAt']) 
-          : null,
+      id: json['id'] ?? '',
+      guestCode: json['guestCode'] ?? '',
+      fullName: json['fullName'] ?? json['name'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      isCheckedIn: json['isCheckedIn'] ?? json['checkedIn'] ?? false,
       synced: json['synced'] ?? false,
     );
   }
@@ -35,15 +33,13 @@ class GuestModel {
   // 2. Từ Map (Database) → Object
   factory GuestModel.fromMap(Map<String, dynamic> map) {
     return GuestModel(
-      id: map['id'],
-      name: map['name'],
-      email: map['email'],
-      qrCode: map['qrCode'],
-      status: map['status'],
-      checkedInAt: map['checkedInAt'] != null 
-          ? DateTime.parse(map['checkedInAt']) 
-          : null,
-      synced: map['synced'] == 1,
+      id: map['id'] ?? '',
+      guestCode: map['guestCode'] ?? '',
+      fullName: map['fullName'] ?? map['name'] ?? '',
+      email: map['email'] ?? '',
+      phone: map['phone'] ?? '',
+      isCheckedIn: map['isCheckedIn'] == 1 || map['isCheckedIn'] == true,
+      synced: map['synced'] == 1 || map['synced'] == true,
     );
   }
 
@@ -51,12 +47,34 @@ class GuestModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'name': name,
+      'guestCode': guestCode,
+      'fullName': fullName,
       'email': email,
-      'qrCode': qrCode,
-      'status': status,
-      'checkedInAt': checkedInAt?.toIso8601String(),
+      'phone': phone,
+      'isCheckedIn': isCheckedIn ? 1 : 0,
       'synced': synced ? 1 : 0,
     };
+  }
+
+  // Copy với các field mới
+  GuestModel copyWith({
+    String? id,
+    String? guestCode,
+    String? fullName,
+    String? email,
+    String? phone,
+    String? qrCode,
+    bool? isCheckedIn,
+    bool? synced,
+  }) {
+    return GuestModel(
+      id: id ?? this.id,
+      guestCode: guestCode ?? this.guestCode,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      isCheckedIn: isCheckedIn ?? this.isCheckedIn,
+      synced: synced ?? this.synced,
+    );
   }
 }

@@ -4,18 +4,13 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import '../providers/ticket_provider.dart';
 import '../services/database_helper.dart';
+import '../utils/network_sync_service.dart';
 import 'history_screen.dart';
 import 'concert_selection_screen.dart';
+import 'settings_screen.dart';
 
 class ScannerScreen extends StatefulWidget {
-  final String concertId;
-  final String concertName;
-
-  const ScannerScreen({
-    super.key,
-    required this.concertId,
-    required this.concertName,
-  });
+  const ScannerScreen({super.key});
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -32,16 +27,19 @@ class _ScannerScreenState extends State<ScannerScreen> {
   String? _lastScannedCode;
   bool _isProcessing = false;
   bool _isSyncing = false;
+  bool _isLoading = true;
 
-  // Đã bắt đầu quét QR hay chưa (ban đầu chỉ hiển thị camera bình thường)
   bool _scanningStarted = false;
 
   // Thống kê
-  int _totalTickets = 0; // Tổng số vé (dùng cho "Lịch sử")
-  int _totalScanned = 0; // Số vé đã quét hôm nay
+  int _totalTickets = 0;
+  int _totalScanned = 0;
 
+  bool _isOnline = true;
 
-  bool _isOnline = true; // Trạng thái kết nối mạng
+  // Thông tin concert
+  String _concertId = '';
+  String _concertName = '';
 
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
@@ -49,17 +47,101 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void initState() {
     super.initState();
     _checkPermission();
-    _loadStats();
+    _loadCurrentConcert();
   }
 
-  Future<void> _loadStats() async {
-    final totalTickets = await _dbHelper.getTotalTickets();
-    final scanned = await _dbHelper.getScannedCount();
-
+  // Load thông tin concert từ database
+  Future<void> _loadCurrentConcert() async {
     setState(() {
-      _totalTickets = totalTickets;
-      _totalScanned = scanned;
+      _isLoading = true;
     });
+
+    try {
+      // Lấy concertId và concertName từ database
+      final concertId = await _dbHelper.getCurrentConcertId();
+      final concertName = await _dbHelper.getCurrentConcertName();
+
+      if (concertId != null && concertName != null) {
+        // Có concert -> load bình thường
+        setState(() {
+          _concertId = concertId;
+          _concertName = concertName;
+          _isLoading = false;
+        });
+        // Cập nhật NetworkSyncService với concertId hiện tại
+        try {
+          final syncService = Provider.of<NetworkSyncService>(context, listen: false);
+          syncService.updateConcertId(concertId);
+          print('🔧 ScannerScreen updated syncService concertId=$concertId');
+        } catch (e) {
+          print('Error updating syncService concertId: $e');
+        }
+        // Load stats sau khi có concertId
+        await _loadStats();
+      } else {
+        // Không có concert -> dùng giá trị mặc định
+        print('🟡 No concert selected, using default');
+        setState(() {
+          _concertId = 'default_concert';
+          _concertName = 'Chưa có sự kiện';
+          _isLoading = false;
+        });
+        await _loadStats();
+      }
+    } catch (e) {
+      print('Error loading current concert: $e');
+      if (mounted) {
+        setState(() {
+          _concertId = 'default_concert';
+          _concertName = 'Lỗi tải sự kiện';
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi tải sự kiện: ${e.toString()}'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  // Load thống kê từ database
+  Future<void> _loadStats() async {
+    // Nếu không có concertId hợp lệ, không load stats
+    if (_concertId.isEmpty || _concertId == 'default_concert') {
+      setState(() {
+        _totalTickets = 0;
+        _totalScanned = 0;
+      });
+      return;
+    }
+
+    try {
+      // Dùng hàm trong DatabaseHelper để lấy số liệu
+      final totalTickets = await _dbHelper.getTotalTickets();
+      final scanned = await _dbHelper.getScannedCount();
+
+      setState(() {
+        _totalTickets = totalTickets;
+        _totalScanned = scanned;
+      });
+
+      print('📊 Stats loaded: Total=$totalTickets, Scanned=$scanned');
+    } catch (e) {
+      print('Error loading stats: $e');
+      setState(() {
+        _totalTickets = 0;
+        _totalScanned = 0;
+      });
+    }
+  }
+
+  // Refresh dữ liệu (gọi khi quay lại màn hình)
+  Future<void> _refreshData() async {
+    await _loadCurrentConcert();
+    await _loadStats();
   }
 
   Future<void> _checkPermission() async {
@@ -75,7 +157,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
-
   void _startScanning() {
     setState(() {
       _scanningStarted = true;
@@ -84,7 +165,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     });
   }
 
-  // Dừng quét, quay lại trạng thái camera bình thường
   void _stopScanning() {
     setState(() {
       _scanningStarted = false;
@@ -107,13 +187,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     // Gọi provider để validate
     final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
-    final result = await ticketProvider.validateTicket(qrCode);
+    final result = await ticketProvider.scanQR(qrCode);
 
     if (!mounted) return;
 
     // Cập nhật thống kê nếu thành công
     if (result['success']) {
-      // Load lại stats ngay sau khi quét thành công
       await _loadStats();
     }
 
@@ -164,14 +243,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   Future<void> _syncOffline() async {
-    // Kiểm tra nếu đang sync thì không cho chạy tiếp
     if (_isSyncing) return;
 
     setState(() {
       _isSyncing = true;
     });
 
-    // Hiển thị snackbar đang đồng bộ
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Đang đồng bộ vé...'),
@@ -183,11 +260,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
     try {
       final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
 
-      // Gọi sync tickets từ provider
-      final success = await ticketProvider.syncTickets(widget.concertId);
+      final success = await ticketProvider.syncTickets(_concertId);
 
       if (success && mounted) {
-        // Load lại thống kê sau khi sync thành công
         await _loadStats();
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,6 +303,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
+  void _showSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   void _goBack() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const ConcertSelectionScreen()),
@@ -237,6 +318,45 @@ class _ScannerScreenState extends State<ScannerScreen> {
   @override
   Widget build(BuildContext context) {
     final ticketProvider = Provider.of<TicketProvider>(context);
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF7F7F9),
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: _goBack,
+          ),
+          title: const Text(
+            'Ticket',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Đang tải...',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F9),
@@ -268,7 +388,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              widget.concertName,
+              _concertName.isNotEmpty ? _concertName : 'Chưa có sự kiện',
               style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 11,
@@ -277,53 +397,65 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: _showSettings,
+            tooltip: 'Cài đặt',
+          ),
+          // Thêm nút refresh
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _refreshData,
+            tooltip: 'Làm mới',
+          ),
+        ],
       ),
-      body: Column(
-        children: [
-          // Thanh trạng thái kết nối
-          Container(
-            width: double.infinity,
-            color: const Color(0xFFE8F5E9),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.wifi, color: Colors.green, size: 14),
-                SizedBox(width: 6),
-                Text(
-                  'Đã kết nối - Đồng bộ tự động',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+      body: RefreshIndicator(
+        onRefresh: _refreshData,
+        child: Column(
+          children: [
+            // Thanh trạng thái kết nối
+            Container(
+              width: double.infinity,
+              color: const Color(0xFFE8F5E9),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.wifi, color: Colors.green, size: 14),
+                  SizedBox(width: 6),
+                  Text(
+                    'Đã kết nối - Đồng bộ tự động',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          // ============ Hàng thống kê: Chỉ còn 2 cột ============
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStatColumn('Hôm nay', _totalTickets.toString(), Colors.black),
-                _buildStatColumn('Đã quét', _totalScanned.toString(), Colors.orange),
-              ],
+            // Hàng thống kê - HIỂN THỊ SỐ LIỆU TỪ DATABASE
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildStatColumn('Tổng vé', _totalTickets.toString(), Colors.black),
+                  _buildStatColumn('Đã quét', _totalScanned.toString(), Colors.orange)
+                ],
+              ),
             ),
-          ),
-          // ============ KẾT THÚC ============
 
-          // Khu vực camera / placeholder
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+            // Khu vực camera - KHÔNG BO GÓC
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   width: double.infinity,
-                  color: const Color(0xFFEDEDF2),
+                  color: const Color(0xFFEDEDF2), // Không bo góc
                   child: _hasPermission
                       ? Stack(
                     fit: StackFit.expand,
@@ -450,106 +582,61 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 ),
               ),
             ),
-          ),
 
-          // Nút bắt đầu / dừng quét
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _scanningStarted ? _stopScanning : _startScanning,
-                icon: Icon(_scanningStarted ? Icons.close : Icons.qr_code_scanner),
-                label: Text(_scanningStarted ? 'Dừng quét' : 'Bắt đầu quét'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  textStyle: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Tiêu đề "Thao tác nhanh"
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'THAO TÁC NHANH',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-          ),
-
-          // Hai thẻ thao tác nhanh: Đồng bộ | Lịch sử
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildQuickActionCard(
-                    icon: Icons.sync,
-                    label: 'Đồng bộ',
-                    value: _isOnline ? 'Online' : 'Đang đồng bộ...',
-                    onTap: _syncOffline,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildQuickActionCard(
-                    icon: Icons.history,
-                    label: 'Lịch sử',
-                    value: '$_totalTickets vé',
-                    onTap: _showHistory,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Thông báo lỗi nếu có
-          if (ticketProvider.validationMessage != null &&
-              !ticketProvider.validationSuccess)
+            // Nút bắt đầu / dừng quét
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        ticketProvider.validationMessage!,
-                        style: const TextStyle(color: Colors.red, fontSize: 12),
-                      ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _scanningStarted ? _stopScanning : _startScanning,
+                  icon: Icon(_scanningStarted ? Icons.close : Icons.qr_code_scanner),
+                  label: Text(_scanningStarted ? 'Dừng quét' : 'Bắt đầu quét'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    textStyle: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                 ),
               ),
             ),
-        ],
-      ),
 
-      // Thanh điều hướng dưới: Quét vé | Lịch sử
+            // Thông báo lỗi nếu có
+            if (ticketProvider.validationMessage != null &&
+                !ticketProvider.validationSuccess)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          ticketProvider.validationMessage!,
+                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
       bottomNavigationBar: SafeArea(
         child: Container(
           decoration: const BoxDecoration(
@@ -575,6 +662,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   onTap: _showHistory,
                 ),
               ),
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.settings,
+                  label: 'Cài đặt',
+                  active: false,
+                  onTap: _showSettings,
+                ),
+              ),
             ],
           ),
         ),
@@ -582,7 +677,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  // Khung quét QR kiểu 4 góc vuông (giống Zalo)
+  // Khung quét QR kiểu 4 góc vuông - KHÔNG BO GÓC
   Widget _buildScanFrame() {
     const double size = 260;
     const double cornerLength = 32;
@@ -619,7 +714,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  // Một góc vuông (chữ L) của khung quét
   Widget _buildCorner(
       double length,
       double borderWidth,
@@ -637,17 +731,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
           left: left ? BorderSide(color: color, width: borderWidth) : BorderSide.none,
           right: !left ? BorderSide(color: color, width: borderWidth) : BorderSide.none,
         ),
-        borderRadius: BorderRadius.only(
-          topLeft: top && left ? const Radius.circular(12) : Radius.zero,
-          topRight: top && !left ? const Radius.circular(12) : Radius.zero,
-          bottomLeft: !top && left ? const Radius.circular(12) : Radius.zero,
-          bottomRight: !top && !left ? const Radius.circular(12) : Radius.zero,
-        ),
+        // ✅ KHÔNG BO GÓC
+        borderRadius: BorderRadius.zero,
       ),
     );
   }
 
-  // Cột thống kê (nhãn nhỏ phía trên, giá trị lớn phía dưới)
+  // Cột thống kê
   Widget _buildStatColumn(String label, String value, Color color) {
     return Column(
       children: [
@@ -671,57 +761,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  // Thẻ thao tác nhanh (Đồng bộ / Lịch sử)
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: _isSyncing ? null : onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: _isSyncing ? Colors.grey[200] : Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-        ),
-        child: Column(
-          children: [
-            if (_isSyncing)
-              const SizedBox(
-                height: 22,
-                width: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.deepPurple,
-                ),
-              )
-            else
-              Icon(icon, color: Colors.deepPurple, size: 22),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _isSyncing ? 'Đang đồng bộ...' : value,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Mục điều hướng dưới cùng
   Widget _buildNavItem({
     required IconData icon,
     required String label,

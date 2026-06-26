@@ -7,18 +7,34 @@ import 'providers/ticket_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/concert_selection_screen.dart';
 import 'utils/network_sync_service.dart';
-import '../services/database_helper.dart';
-
+import 'services/database_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Khởi tạo Dio
   DioClient().init();
-  //đoạn code này dùng để xóa bảng data (nếu cần thì bỏ comment rồi chạy 1 lận)
+
+  // Chỉ reset khi cần (bỏ comment nếu muốn xóa dữ liệu cũ)
   await DatabaseHelper().resetDatabase();
 
-  //khởi tạo background sync
+  // Khởi tạo database
+  await DatabaseHelper().database;
+  print('Database initialized');
+
+  final dbHelper = DatabaseHelper();
+  final currentConcertId = await dbHelper.getCurrentConcertId();
+
+  // Khởi tạo background sync với concertId (nếu có)
   final syncService = NetworkSyncService();
-  syncService.startBackgroundSync();
+  if (currentConcertId != null && currentConcertId.isNotEmpty) {
+    syncService.startBackgroundSync(concertId: currentConcertId);
+    print('  started with concertId: $currentConcertId');
+  } else {
+    // Khởi động nhưng chưa có concertId, sẽ cập nhật sau
+    syncService.startBackgroundSync();
+    print('NetworkSyncService started without concertId (will update later)');
+  }
 
   runApp(
     MultiProvider(
@@ -26,6 +42,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ConcertProvider()),
         ChangeNotifierProvider(create: (_) => TicketProvider()),
+        // Provider cho NetworkSyncService
+        Provider<NetworkSyncService>.value(value: syncService),
       ],
       child: const MyApp(),
     ),
@@ -75,12 +93,6 @@ class MyApp extends StatelessWidget {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             authProvider.init();
           });
-
-          if (authProvider.isLoggedIn) {
-            return const ConcertSelectionScreen();
-          }
-
-          // Chưa đăng nhập → hiển thị màn hình login
           return const LoginScreen();
         },
       ),
