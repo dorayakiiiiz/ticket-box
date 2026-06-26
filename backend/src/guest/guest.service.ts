@@ -52,7 +52,6 @@ export class GuestService {
       concert: g.concert?.name || 'N/A',
       checkedIn: g.isCheckedIn,
       created: g.createdAt.toISOString().split('T')[0],
-      updatedAt: g.updatedAt, // ✅ Thêm updatedAt vào response
     }));
 
     return {
@@ -77,8 +76,8 @@ export class GuestService {
       guestCode,
       concert,
       isCheckedIn: false,
-      createdAt: new Date(), // ✅ Set thủ công
-      updatedAt: new Date(), // ✅ Set thủ công
+      createdAt: new Date(), 
+      updatedAt: new Date(),
     };
 
     if (data.email !== undefined && data.email !== null && data.email !== '') {
@@ -265,7 +264,7 @@ export class GuestService {
               this.logger.error({ err }, 'Final batch insert failed, falling back to single insert');
               for (const g of batchData) {
                 try {
-                  g.updatedAt = new Date(); // ✅ Set thủ công
+                  g.updatedAt = new Date(); 
                   await this.guestRepo.save(g);
                   successCount++;
                 } catch (e) {
@@ -361,11 +360,6 @@ export class GuestService {
 
   async getGuestChangesSince(concertId: string, since: Date) {
     try {
-      console.log('🔍 [getGuestChangesSince]', { 
-        concertId, 
-        since: since.toISOString(), // ✅ Log rõ ràng
-      });
-
       const guests = await this.guestRepo
         .createQueryBuilder('guest')
         .where('guest.concertId = :concertId', { concertId })
@@ -382,10 +376,9 @@ export class GuestService {
         email: guest.email,
         phone: guest.phone,
         isCheckedIn: guest.isCheckedIn,
-        updatedAt: guest.updatedAt, // ✅ Trả về Date object
+        updatedAt: guest.updatedAt,
       }));
     } catch (error) {
-      console.error('[getGuestChangesSince] Error:', error);
       return [];
     }
   }

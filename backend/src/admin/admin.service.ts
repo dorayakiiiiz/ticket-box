@@ -2,13 +2,11 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
 import { Concert } from '../entities/concert.entity';
 import { Order, OrderStatus } from '../entities/order.entity';
 import { Ticket, TicketStatus } from '../entities/ticket.entity';
 import { User, UserRole } from '../entities/user.entity';
-import { Guest } from '../entities/guest.entity';
 
 @Injectable()
 export class AdminService {
@@ -19,7 +17,6 @@ export class AdminService {
     @InjectRepository(Order)   private readonly orderRepo:   Repository<Order>,
     @InjectRepository(Ticket)  private readonly ticketRepo:  Repository<Ticket>,
     @InjectRepository(User)    private readonly userRepo:    Repository<User>,
-    @InjectRepository(Guest)   private readonly guestRepo:   Repository<Guest>,
   ) {}
 
 
@@ -56,7 +53,9 @@ export class AdminService {
 
     const [orders, total] = await qb.getManyAndCount();
 
+    // Transform to match FE's OrderData shape
     const data = orders.map(o => {
+      // format date as YYYY-MM-DD (or keep ISO if FE expects it, but FE mock is "2026-06-01")
       const date = o.createdAt.toISOString().split('T')[0];
       return {
         id: o.orderCode,
@@ -164,7 +163,7 @@ export class AdminService {
       fullName: data.fullName,
       password: hashed,
       role: data.role as UserRole,
-      isVerified: true,
+      isVerified: true, // Created by admin so auto-verified
     });
 
     await this.userRepo.save(user);
@@ -198,6 +197,8 @@ export class AdminService {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('Không tìm thấy người dùng');
 
+    // Admin should not delete themselves, but this is handled by FE (hiding button) 
+    // and can be double checked in controller if we inject req.user
     await this.userRepo.update(userId, {
       fullName: null,
       phone: null,
@@ -211,29 +212,34 @@ export class AdminService {
 
   // ─── Stats Cards ─────────────────────────────────────────────────────────────
 
+
   private async getStats() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const [revenueResult, ticketsResult, activeEvents, checkedInToday] = await Promise.all([
+      // Tổng doanh thu từ đơn PAID
       this.orderRepo
         .createQueryBuilder('o')
         .select('SUM(o.totalAmount)', 'total')
         .where('o.status = :status', { status: OrderStatus.PAID })
         .getRawOne<{ total: string }>(),
 
+      // Tổng vé đã bán (quantity trong đơn PAID)
       this.orderRepo
         .createQueryBuilder('o')
         .select('SUM(o.quantity)', 'total')
         .where('o.status = :status', { status: OrderStatus.PAID })
         .getRawOne<{ total: string }>(),
 
+      // Sự kiện chưa diễn ra (date >= hôm nay, chưa xóa mềm)
       this.concertRepo
         .createQueryBuilder('c')
         .where('c.date >= :today', { today })
         .andWhere('c.deletedAt IS NULL')
         .getCount(),
 
+      // Số vé check-in hôm nay (ticket status = USED, updatedAt >= đầu ngày)
       this.ticketRepo
         .createQueryBuilder('t')
         .where('t.status = :status', { status: TicketStatus.USED })
@@ -277,6 +283,7 @@ export class AdminService {
   // ─── Concert Performance ──────────────────────────────────────────────────────
 
   private async getConcertPerformance() {
+    // Dùng query builder join concerts → ticket_types → orders để tính sold% và revenue
     const rows = await this.concertRepo
       .createQueryBuilder('c')
       .select('c.id', 'id')

@@ -80,7 +80,7 @@ export class TicketService {
           id: t.id,
           qrCode: t.qrCode,
           status: t.status,
-          updatedAt: t.updatedAt, // ✅ Thêm updatedAt
+          updatedAt: t.updatedAt, 
         })),
       };
     });
@@ -151,7 +151,7 @@ export class TicketService {
       message: 'Quét vé thành công!',
       checkedInAt: scannedAt || new Date().toISOString(),
       ticketId: ticket.id,
-      updatedAt: ticket.updatedAt, // ✅ Trả về updatedAt
+      updatedAt: ticket.updatedAt, 
     };
   }
 

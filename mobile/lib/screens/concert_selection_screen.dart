@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/concert_provider.dart';
 import '../providers/ticket_provider.dart';
-import '../providers/auth_provider.dart';
 import '../services/database_helper.dart';
-import '../utils/network_sync_service.dart'; // ✅ Import thêm
-import 'scanner_screen.dart';
+import '../utils/network_sync_service.dart';
+
 
 class ConcertSelectionScreen extends StatefulWidget {
   const ConcertSelectionScreen({super.key});
@@ -54,13 +53,8 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
     final success = await ticketProvider.syncTickets(concertId);
 
     if (success && mounted) {
-      // CẬP NHẬT concert vào bảng current_concerts
+
       await _dbHelper.saveCurrentConcert(concertId, concertName);
-
-      print('    Đã lưu concert vào current_concerts:');
-      print('   - ID: $concertId');
-      print('   - Name: $concertName');
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -79,27 +73,18 @@ class _ConcertSelectionScreenState extends State<ConcertSelectionScreen> {
     }
   }
 
-  // ✅ Hàm chọn concert - cập nhật và chuyển đến Scanner
+
   Future<void> _selectConcert(String concertId, String concertName) async {
     // Lưu concert vào database
     await _dbHelper.saveCurrentConcert(concertId, concertName);
 
-    // ✅ Cập nhật NetworkSyncService
+
     try {
       final syncService = context.read<NetworkSyncService>();
       syncService.updateConcertId(concertId);
-      print('🔵 [SelectConcert] Updated NetworkSyncService with concertId: $concertId');
+      print('[SelectConcert] Updated NetworkSyncService with concertId: $concertId');
     } catch (e) {
-      print('❌ Error updating syncService from ConcertSelection: $e');
-    }
-
-    // Chuyển đến ScannerScreen
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => const ScannerScreen(),
-        ),
-      );
+      print('Error updating syncService from ConcertSelection: $e');
     }
   }
 
