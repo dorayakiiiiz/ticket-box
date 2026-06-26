@@ -149,7 +149,7 @@ export class AuthService {
     // Gửi email qua Queue (Bất đồng bộ)
     await this.notificationQueue.add('send-otp', {
       channel: 'EMAIL',
-      recipient: { phone: normalizedEmail },
+      recipient: { email: normalizedEmail },
       templateId: 'forgot-password',
       data: { otpCode },
     }, {

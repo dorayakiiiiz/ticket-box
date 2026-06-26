@@ -1,3 +1,3 @@
-- Chưa có thời điểm mở bán
+- Chưa có thời điểm mở bán -> có rồi
 - Chỗ ngồi cố định hay up ảnh -> mail hỏi thầy
 - Hệ thống khách mời không có API là gì
