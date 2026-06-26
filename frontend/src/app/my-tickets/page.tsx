@@ -246,7 +246,7 @@ export default function MyTicketsPage() {
             </div>
             <h1 style={D} className="text-5xl font-black uppercase italic tracking-tight mb-1">VÉ CỦA TÔI</h1>
             <p className="text-sm text-gray-400">
-              {isLoading ? "Đang tải dữ liệu..." : `${flatTickets.length} vé · ${upcomingCount} sắp diễn ra`}
+              {isLoading ? "Đang tải dữ liệu..." : `${flatTickets.length} vé, ${upcomingCount} sắp diễn ra`}
             </p>
           </div>
 

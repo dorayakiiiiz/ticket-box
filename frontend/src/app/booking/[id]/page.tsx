@@ -274,7 +274,7 @@ export default function SeatMapPage() {
         {/* ────── Sidebar — giữ nguyên style, chuyển sang ticketTypes thật ────── */}
         <div className="w-full lg:w-80 border-l border-[#222] bg-[#0a0a0a] flex flex-col">
           <div className="p-5 border-b border-[#222]">
-            <div className="text-[10px] md:text-xs font-mono tracking-[0.2em] text-gray-400 uppercase mb-1">{dateStr} · {timeStr}</div>
+            <div className="text-[10px] md:text-xs font-mono tracking-[0.2em] text-gray-400 uppercase mb-1">{dateStr} - {timeStr}</div>
             <div style={D} className="text-xl font-black uppercase italic">{concert.name}</div>
             <div className="flex items-center gap-1 text-[11px] md:text-xs text-gray-400 mt-1"><MapPin size={10} />{concert.venue}</div>
           </div>
