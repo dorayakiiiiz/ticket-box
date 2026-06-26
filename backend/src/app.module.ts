@@ -16,7 +16,7 @@ import { ConcertModule } from './concert/concert.module';
 import { BookingModule } from './booking/booking.module';
 import { AdminModule } from './admin/admin.module';
 import { GuestModule } from './guest/guest.module';
-import { RedisModule } from '@nestjs-modules/ioredis';
+import { RedisModule, getRedisConnectionToken } from '@nestjs-modules/ioredis';
 import { User } from './entities/user.entity';
 import { Otp } from './entities/otp.entity';
 import { Concert } from './entities/concert.entity';
@@ -79,17 +79,6 @@ import { RolesGuard } from './common/guards/roles.guard';
       }),
       inject: [ConfigService],
     }),
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('REDIS_HOST'),
-          port: configService.get<number>('REDIS_PORT'),
-          password: configService.get<string>('REDIS_PASSWORD'),
-        },
-      }),
-      inject: [ConfigService],
-    }),
     RedisModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -98,31 +87,33 @@ import { RolesGuard } from './common/guards/roles.guard';
         options: {
           password: configService.get<string>('REDIS_PASSWORD'),
           lazyConnect: false,
-          maxRetriesPerRequest: 3,
+          maxRetriesPerRequest: null, // [FIXED] Bắt buộc là null cho BullMQ
           enableReadyCheck: true,
         },
       }),
       inject: [ConfigService],
     }),
+    BullModule.forRootAsync({
+      imports: [ConfigModule, RedisModule],
+      useFactory: (configService: ConfigService, redisClient: Redis) => ({
+        connection: redisClient as any,
+      }),
+      // default là tên connection redis mặc định khi ko đặt ở RedisModule phía trên
+      inject: [ConfigService, getRedisConnectionToken('default')],
+    }),
     // Rate Limiting toàn cục — mỗi IP/user tối đa 10 req/giây mặc định
     // Sử dụng Redis để đồng bộ rate limit trên toàn bộ các server
     ThrottlerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
+      imports: [ConfigModule, RedisModule],
+      inject: [ConfigService, getRedisConnectionToken('default')],
+      useFactory: (config: ConfigService, redisClient: Redis) => ({
         throttlers: [
           {
             ttl: 1000,
             limit: 10,
           },
         ],
-        storage: new ThrottlerStorageRedisService(
-          new Redis({
-            host: config.get<string>('REDIS_HOST'),
-            port: config.get<number>('REDIS_PORT'),
-            password: config.get<string>('REDIS_PASSWORD'),
-          })
-        ),
+        storage: new ThrottlerStorageRedisService(redisClient),
       }),
     }),
     AuthModule,
@@ -138,8 +129,8 @@ import { RolesGuard } from './common/guards/roles.guard';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_GUARD,       useClass: JwtAuthGuard },
-    { provide: APP_GUARD,       useClass: RolesGuard }
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard }
   ],
 })
 export class AppModule { }
