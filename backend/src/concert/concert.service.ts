@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   ConflictException,
   BadRequestException,
+  InternalServerErrorException,
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +13,8 @@ import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import type Redis from 'ioredis';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { ConfigService } from '@nestjs/config';
+import { createClient } from '@supabase/supabase-js';
 import { Concert } from '../entities/concert.entity';
 import { TicketType } from '../entities/ticket-type.entity';
 import { Order, OrderStatus } from '../entities/order.entity';
@@ -36,6 +39,7 @@ export class ConcertService implements OnApplicationBootstrap {
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
     @InjectQueue(AI_BIO_QUEUE) private readonly aiBioQueue: Queue,
     @InjectRedis() private readonly redis: Redis,
+    private readonly configService: ConfigService,
   ) {}
 
   // Hàm tính toán số lượng vé thực tế từ DB bao gồm cả vé đang bị giam (PENDING)
@@ -190,6 +194,85 @@ export class ConcertService implements OnApplicationBootstrap {
     }
     await this.concertRepo.update(id, { aiStatus: 'IDLE' });
     return { message: 'Đã reset AI Bio status' };
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  /** Upload buffer lên Supabase Storage, tự tạo bucket nếu chưa có. Trả về publicUrl. */
+  private async uploadImageToSupabase(
+    bucket: string,
+    fileName: string,
+    file: Express.Multer.File,
+  ): Promise<string> {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseKey = this.configService.get<string>('SUPABASE_SECRET_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new InternalServerErrorException('Supabase chưa được cấu hình');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Tự tạo bucket nếu chưa tồn tại (idempotent)
+    const { data: existingBucket } = await supabase.storage.getBucket(bucket);
+    if (!existingBucket) {
+      const { error: bucketErr } = await supabase.storage.createBucket(bucket, {
+        public: true,
+        fileSizeLimit: 10 * 1024 * 1024, // 10MB
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+      });
+      if (bucketErr) {
+        this.logger.error({ bucketErr }, `Failed to create Supabase bucket: ${bucket}`);
+        throw new InternalServerErrorException('Không thể tạo bucket storage');
+      }
+    }
+
+    const { error: uploadErr } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true,
+      });
+
+    if (uploadErr) {
+      this.logger.error({ uploadErr }, `Failed to upload to Supabase bucket: ${bucket}`);
+      throw new InternalServerErrorException('Upload ảnh thất bại');
+    }
+
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
+    return urlData.publicUrl;
+  }
+
+  // ─── Image Uploads ────────────────────────────────────────────────────────────
+
+  async uploadSeatMap(id: string, file: Express.Multer.File, user: { id: string; role: UserRole }): Promise<{ seatMapImageUrl: string }> {
+    if (user.role !== UserRole.ORGANIZER) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền upload sơ đồ chỗ ngồi');
+    }
+    await this.findOne(id);
+
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const fileName = `seat-map_${id}_${Date.now()}.${ext}`;
+    const seatMapImageUrl = await this.uploadImageToSupabase('seat-maps', fileName, file);
+
+    await this.concertRepo.update(id, { seatMapImageUrl });
+    this.logger.info({ concertId: id, seatMapImageUrl }, 'Seat map uploaded');
+    return { seatMapImageUrl };
+  }
+
+  async uploadCoverImage(id: string, file: Express.Multer.File, user: { id: string; role: UserRole }): Promise<{ coverImageUrl: string }> {
+    if (user.role !== UserRole.ORGANIZER) {
+      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền upload ảnh concert');
+    }
+    await this.findOne(id);
+
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const fileName = `cover_${id}_${Date.now()}.${ext}`;
+    const coverImageUrl = await this.uploadImageToSupabase('cover-images', fileName, file);
+
+    await this.concertRepo.update(id, { coverImageUrl });
+    this.logger.info({ concertId: id, coverImageUrl }, 'Cover image uploaded');
+    return { coverImageUrl };
   }
 
   async remove(id: string, user: { id: string; role: UserRole }) {

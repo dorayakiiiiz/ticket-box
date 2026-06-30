@@ -39,6 +39,9 @@ export class Concert {
   @Column({ nullable: true })
   coverImageUrl: string;
 
+  @Column({ nullable: true })
+  seatMapImageUrl: string;
+
   @Column({ type: 'enum', enum: ConcertStatus, default: ConcertStatus.UPCOMING })
   status: ConcertStatus;
 
