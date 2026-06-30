@@ -215,60 +215,91 @@ export default function SeatMapPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row flex-1">
-        {/* ────── Sơ đồ sân khấu (Seat Map) — GIỮA NGUYÊN giao diện ban đầu ────── */}
+        {/* ────── Seat Map: ảnh sơ đồ từ DB (hoặc fallback) ────── */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-[#0D0D0D]">
-          <div className="text-center mb-5">
-            <p className="text-[11px] md:text-xs font-mono tracking-[0.2em] text-[#CCFF00] uppercase">Chọn khu vực — Bấm vào sơ đồ</p>
-          </div>
-          <div className="w-full max-w-xl lg:max-w-3xl flex flex-col gap-2 lg:gap-3">
-            {/* Stage */}
-            <div className="flex justify-center mb-1 lg:mb-3">
-              <div className="bg-white/5 border border-white/10 px-24 py-2.5 lg:py-4 lg:px-32 text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] text-gray-500">STAGE</div>
-            </div>
-            {/* CAT row top */}
-            <div className="grid grid-cols-2 gap-2 lg:gap-3">
-              <ZoneBtn name="CAT 2" label="CAT 2A" />
-              <ZoneBtn name="CAT 2" label="CAT 2B" />
-            </div>
-            {/* Middle block */}
-            <div className="grid grid-cols-[60px_1fr_60px] lg:grid-cols-[80px_1fr_80px] gap-2 lg:gap-3">
-              <div className="grid grid-rows-2 gap-2 lg:gap-3">
-                <ZoneBtn name="GA" label="GA 2A" />
-                <ZoneBtn name="GA" label="GA 1A" />
+          {concert.seatMapImageUrl ? (
+            /* Hiển thị ảnh sơ đồ admin đã upload */
+            <div className="w-full max-w-2xl lg:max-w-4xl flex flex-col items-center gap-4">
+              <p className="text-[11px] md:text-xs font-mono tracking-[0.2em] text-[#CCFF00] uppercase">
+                Chọn khu vực — Tham khảo sơ đồ
+              </p>
+              {/* Seat map image — full width, click to zoom */}
+              <div
+                className="w-full relative overflow-hidden border border-white/10 cursor-zoom-in group"
+                onClick={() => window.open(concert.seatMapImageUrl!, '_blank')}
+                title="Nhấn để xem ảnh đầy đủ"
+              >
+                <img
+                  src={concert.seatMapImageUrl}
+                  alt={`Sơ đồ chỗ ngồi ${concert.name}`}
+                  className="w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                  style={{ maxHeight: '60vh', background: '#111' }}
+                />
+                {/* Hover overlay hint */}
+                <div className="absolute inset-0 flex items-end justify-end p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <span className="flex items-center gap-1.5 px-2.5 py-1.5 bg-black/70 border border-white/20 text-[10px] font-mono text-white/80 tracking-widest uppercase">
+                    ↗ Phóng to
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-1 gap-2 lg:gap-3">
-                <ZoneBtn name="OZONE" label="OZONE" />
+              {/* Legend — hiện các loại vé thật từ backend */}
+              <div className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+                {ticketTypes.map(tt => (
+                  <button
+                    key={tt.id}
+                    onClick={() => { if (!tt.soldOut) { setSel(tt); setQty(1); } }}
+                    className={`flex items-center gap-1.5 px-3 py-1 border transition-all ${
+                      sel?.id === tt.id
+                        ? 'border-white/40 bg-white/10'
+                        : tt.soldOut
+                          ? 'border-transparent opacity-40 cursor-not-allowed'
+                          : 'border-transparent hover:border-white/20 cursor-pointer'
+                    }`}
+                  >
+                    <div className="w-2.5 h-2.5 shrink-0" style={{ backgroundColor: tt.colorCode || '#CCFF00' }} />
+                    <span className="text-[9px] md:text-[10px] font-mono text-gray-300">{tt.name}</span>
+                    {tt.soldOut && <span className="text-[9px] text-[#FF2D20] font-mono">· Hết</span>}
+                  </button>
+                ))}
               </div>
-              <div className="grid grid-rows-2 gap-2 lg:gap-3">
-                <ZoneBtn name="GA" label="GA 2B" />
-                <ZoneBtn name="GA" label="GA 1B" />
+              <p className="text-[10px] text-gray-600 font-mono">Nhấn vào tên khu vực để chọn, hoặc chọn từ danh sách bên phải</p>
+            </div>
+          ) : (
+            /* Fallback: chưa có ảnh → hiển thị danh sách zone dạng text */
+            <div className="w-full max-w-xl lg:max-w-3xl flex flex-col gap-3">
+              <p className="text-[11px] md:text-xs font-mono tracking-[0.2em] text-[#CCFF00] uppercase text-center mb-2">
+                Chọn khu vực
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {ticketTypes.map(tt => (
+                  <button
+                    key={tt.id}
+                    onClick={() => { if (!tt.soldOut) { setSel(tt); setQty(1); } }}
+                    disabled={tt.soldOut}
+                    className="flex flex-col items-center justify-center py-5 px-3 border-2 transition-all font-black uppercase tracking-wider text-xs"
+                    style={{
+                      backgroundColor: tt.colorCode + '1a',
+                      borderColor: sel?.id === tt.id ? tt.colorCode : tt.colorCode + '55',
+                      color: tt.colorCode,
+                      opacity: tt.soldOut ? 0.4 : 1,
+                    }}
+                  >
+                    <span>{tt.name}</span>
+                    {tt.soldOut && <span className="text-[9px] font-normal mt-1 text-[#FF2D20]">Hết vé</span>}
+                  </button>
+                ))}
+              </div>
+              {/* Legend */}
+              <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
+                {ticketTypes.map(tt => (
+                  <div key={tt.id} className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5" style={{ backgroundColor: tt.colorCode || '#CCFF00' }} />
+                    <span className="text-[9px] md:text-[10px] font-mono text-gray-400">{tt.name}</span>
+                  </div>
+                ))}
               </div>
             </div>
-            {/* VIP / SVIP / SKY */}
-            <div className="grid grid-cols-5 gap-2 lg:gap-3">
-              <ZoneBtn name="VIP" label="VIP A" />
-              <ZoneBtn name="SVIP" label="SVIP A" />
-              <ZoneBtn name="SKY" label="SKY" />
-              <ZoneBtn name="SVIP" label="SVIP B" />
-              <ZoneBtn name="VIP" label="VIP B" />
-            </div>
-            {/* CAT 1 */}
-            <div className="grid grid-cols-[1fr_60px_1fr] lg:grid-cols-[1fr_80px_1fr] gap-2 lg:gap-3">
-              <ZoneBtn name="CAT 1" label="CAT 1A" />
-              <div className="flex items-center justify-center text-[8px] lg:text-xs font-mono tracking-widest text-gray-500 border border-[#222]">FOH</div>
-              <ZoneBtn name="CAT 1" label="CAT 1B" />
-            </div>
-          </div>
-
-          {/* Legend — hiện các loại vé thật từ backend */}
-          <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2">
-            {ticketTypes.map(tt => (
-              <div key={tt.id} className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5" style={{ backgroundColor: tt.colorCode || '#CCFF00' }} />
-                <span className="text-[9px] md:text-[10px] font-mono text-gray-400">{tt.name}</span>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
 
         {/* ────── Sidebar — giữ nguyên style, chuyển sang ticketTypes thật ────── */}

@@ -98,6 +98,28 @@ export const adminService = {
     return res.data;
   },
 
+  // Upload file ảnh sơ đồ chỗ ngồi lên Supabase Storage
+  uploadSeatMap: async (concertId: string, file: File): Promise<{ seatMapImageUrl: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post(`/concerts/${concertId}/upload-seat-map`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30_000,
+    });
+    return res.data;
+  },
+
+  // Upload file ảnh bìa (cover) concert lên Supabase Storage
+  uploadCoverImage: async (concertId: string, file: File): Promise<{ coverImageUrl: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post(`/concerts/${concertId}/upload-cover-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30_000,
+    });
+    return res.data;
+  },
+
   // ─── Ticket Type CRUD ────────────────────────────────────────────────────────
 
   createTicketType: async (concertId: string, payload: CreateTicketTypePayload): Promise<TicketType> => {

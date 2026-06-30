@@ -8,8 +8,6 @@ import { ConcertService } from './concert.service';
 import { ConcertController } from './concert.controller';
 import { AiBioProcessor } from './ai-bio.processor';
 import { AiProviderModule } from '../ai-provider/ai-provider.module';
-
-
 import { Order } from '../entities/order.entity';
 
 @Module({
@@ -21,5 +19,6 @@ import { Order } from '../entities/order.entity';
   ],
   providers: [ConcertService, AiBioProcessor],
   controllers: [ConcertController],
+  exports: [ConcertService], // Export để ConcertService có thể dùng ConfigService trong module khác nếu cần
 })
-export class ConcertModule { }
+export class ConcertModule {}

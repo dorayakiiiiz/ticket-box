@@ -1,12 +1,20 @@
-'use client';
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { X, Pencil, Plus, Trash2 } from 'lucide-react';
-import { adminService } from '../../services/adminService';
-import { fmt } from '../../utils/format';
-import type { Concert, TicketType, CreateTicketTypePayload } from '../../types';
+"use client";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import {
+  X,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+  ImageIcon,
+  ExternalLink,
+} from "lucide-react";
+import { adminService } from "../../services/adminService";
+import { fmt } from "../../utils/format";
+import type { Concert, TicketType, CreateTicketTypePayload } from "../../types";
 
-type ModalMode = 'view' | 'create' | 'edit';
+type ModalMode = "view" | "create" | "edit";
 
 type FormState = {
   name: string;
@@ -20,39 +28,225 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: '', subtitle: '', description: '', venue: '', city: '', date: '', openTime: '', coverImageUrl: '',
+  name: "",
+  subtitle: "",
+  description: "",
+  venue: "",
+  city: "",
+  date: "",
+  openTime: "",
+  coverImageUrl: "",
 };
 
 const D = { fontFamily: "'Barlow Condensed', sans-serif" } as const;
 
 /* Figma-exact input styling — sharp corners, NO rounded */
 const inputCls =
-  'w-full px-4 py-3 bg-white border border-gray-200 text-sm focus:outline-none focus:border-gray-400';
-const labelCls = 'block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2';
+  "w-full px-4 py-3 bg-white border border-gray-200 text-sm focus:outline-none focus:border-gray-400";
+const labelCls =
+  "block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2";
 
 const STATUS_STYLE: Record<string, string> = {
-  UPCOMING: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-  ONGOING:  'text-blue-700 bg-blue-50 border-blue-200',
-  COMPLETED:'text-slate-500 bg-slate-100 border-slate-200',
-  CANCELLED:'text-red-600 bg-red-50 border-red-200',
+  UPCOMING: "text-emerald-700 bg-emerald-50 border-emerald-200",
+  ONGOING: "text-blue-700 bg-blue-50 border-blue-200",
+  COMPLETED: "text-slate-500 bg-slate-100 border-slate-200",
+  CANCELLED: "text-red-600 bg-red-50 border-red-200",
 };
 const STATUS_LABEL: Record<string, string> = {
-  UPCOMING: 'Sắp diễn', ONGOING: 'Đang diễn', COMPLETED: 'Đã kết thúc', CANCELLED: 'Đã huỷ',
+  UPCOMING: "Sắp diễn",
+  ONGOING: "Đang diễn",
+  COMPLETED: "Đã kết thúc",
+  CANCELLED: "Đã huỷ",
 };
 
 function MiniBar({ pct }: { pct: number }) {
   return (
     <div className="w-16 h-1.5 bg-slate-200 overflow-hidden shrink-0">
-      <div className="h-full transition-all duration-300 bg-blue-400" style={{ width: `${pct}%` }} />
+      <div
+        className="h-full transition-all duration-300 bg-blue-400"
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 }
 
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleString('vi-VN', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+  return new Date(iso).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+}
+
+// ─── ImageUploadField — dùng chung cho cover image và seat map ──────────────
+type ImageUploadFieldProps = {
+  label: string;
+  hint?: string;
+  imageUrl: string | null;
+  uploading: boolean;
+  error: string | null;
+  accept?: string;
+  onFile: (file: File) => void;
+  previewMaxHeight?: number;
+  previewLabel?: string;
+  previewNote?: string;
+};
+
+function ImageUploadField({
+  label,
+  hint,
+  imageUrl,
+  uploading,
+  error,
+  accept = "image/jpeg,image/png,image/webp,image/gif",
+  onFile,
+  previewMaxHeight = 320,
+  previewLabel,
+  previewNote,
+}: ImageUploadFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [zoom, setZoom] = useState(1);
+
+  // Reset zoom mỗi khi ảnh thay đổi
+  useEffect(() => { setZoom(1); }, [imageUrl]);
+
+  // Native wheel listener với passive: false để preventDefault() hoạt động
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setZoom((prev) => {
+        const delta = e.deltaY < 0 ? 0.15 : -0.15;
+        return Math.min(5, Math.max(1, parseFloat((prev + delta).toFixed(2))));
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [imageUrl]);
+
+  return (
+    <div>
+      {/* Header row: label trái + nút Upload lại phải (chỉ khi đã có ảnh) */}
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <label className={labelCls}>{label}</label>
+          {hint && <p className="text-[11px] text-gray-400 -mt-1.5">{hint}</p>}
+        </div>
+        {imageUrl && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 hover:text-gray-800 border border-gray-200 px-2.5 py-1 hover:bg-gray-50 transition-colors disabled:opacity-40 shrink-0"
+          >
+            <Upload size={11} />
+            {uploading ? "Đang upload..." : "Upload lại"}
+          </button>
+        )}
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onFile(file);
+          e.target.value = "";
+        }}
+      />
+
+      {imageUrl ? (
+        <div>
+          <div
+            ref={containerRef}
+            className="relative border border-gray-200 bg-gray-50 overflow-hidden select-none"
+            style={{ cursor: zoom > 1 ? "zoom-out" : "zoom-in" }}
+            onDoubleClick={() => setZoom(1)}
+          >
+            <img
+              src={imageUrl}
+              alt={previewLabel ?? label}
+              className="w-full object-contain transition-transform duration-100 ease-out"
+              style={{
+                maxHeight: previewMaxHeight,
+                background: "#f5f5f5",
+                transform: `scale(${zoom})`,
+                transformOrigin: "center center",
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+            {previewLabel && (
+              <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/40 to-transparent px-3 py-2 pointer-events-none">
+                <div className="flex items-center gap-1.5">
+                  <ImageIcon size={11} className="text-white/80" />
+                  <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">
+                    {previewLabel}
+                  </span>
+                </div>
+              </div>
+            )}
+            {/* Zoom indicator */}
+            {zoom > 1 && (
+              <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-0.5 bg-black/60 text-white text-[10px] font-mono pointer-events-none">
+                {Math.round(zoom * 100)}%
+              </div>
+            )}
+            {/* Xem đầy đủ overlay */}
+            <a
+              href={imageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute top-2 right-2 flex items-center gap-1 px-2.5 py-1 bg-white/90 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <ExternalLink size={11} /> Xem đầy đủ
+            </a>
+          </div>
+          {/* Hint bên dưới ảnh */}
+          <p className="text-[10px] text-gray-400 mt-1">
+            {zoom > 1
+              ? "Double-click để về 100%"
+              : "Scroll để phóng to · Double-click để reset"}
+          </p>
+          {previewNote && (
+            <p className="text-[11px] text-gray-400 mt-1">{previewNote}</p>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="flex flex-col items-center justify-center gap-2 w-full py-8 border-2 border-dashed border-gray-200 bg-gray-50/50 text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-colors disabled:opacity-50"
+        >
+          <ImageIcon size={24} className="text-gray-300" />
+          <span className="text-xs font-semibold">
+            {uploading
+              ? "Đang upload..."
+              : "Chọn ảnh (JPEG, PNG, WebP — tối đa 10MB)"}
+          </span>
+          {!uploading && (
+            <span className="flex items-center gap-1.5 text-[11px] text-gray-400 border border-gray-200 px-3 py-1 bg-white">
+              <Upload size={11} /> Chọn file
+            </span>
+          )}
+        </button>
+      )}
+
+      {error && (
+        <div className="mt-2 bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600 font-medium">
+          {error}
+        </div>
+      )}
+    </div>
+  );
 }
 
 type Props = {
@@ -65,13 +259,32 @@ type Props = {
 
 // ─── Blank ticket type form ──────────────────────────────────────────────────
 const EMPTY_TYPE: CreateTicketTypePayload = {
-  name: '', price: 0, totalQuantity: 0, maxPerUser: 2, colorCode: '#6366f1',
+  name: "",
+  price: 0,
+  totalQuantity: 0,
+  maxPerUser: 2,
+  colorCode: "#6366f1",
 };
 
-export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitchToEdit }: Props) {
+export default function ConcertModal({
+  mode,
+  concert,
+  onClose,
+  onSaved,
+  onSwitchToEdit,
+}: Props) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ─── Image upload state ──────────────────────────────────────────────────────
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
+
+  const [seatMapUrl, setSeatMapUrl] = useState<string | null>(null);
+  const [seatMapUploading, setSeatMapUploading] = useState(false);
+  const [seatMapError, setSeatMapError] = useState<string | null>(null);
 
   // ─── Ticket type editor state ───────────────────────────────────────────────
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([]);
@@ -82,20 +295,28 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
   const [typeError, setTypeError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (concert && mode !== 'create') {
+    if (concert && mode !== "create") {
       setForm({
         name: concert.name,
-        subtitle: concert.subtitle ?? '',
+        subtitle: concert.subtitle ?? "",
         description: concert.description,
         venue: concert.venue,
         city: concert.city,
-        date: concert.date ? new Date(concert.date).toISOString().slice(0, 16) : '',
-        openTime: concert.openTime ? new Date(concert.openTime).toISOString().slice(0, 16) : '',
-        coverImageUrl: concert.coverImageUrl ?? '',
+        date: concert.date
+          ? new Date(concert.date).toISOString().slice(0, 16)
+          : "",
+        openTime: concert.openTime
+          ? new Date(concert.openTime).toISOString().slice(0, 16)
+          : "",
+        coverImageUrl: concert.coverImageUrl ?? "",
       });
+      setCoverUrl(concert.coverImageUrl ?? null);
+      setSeatMapUrl(concert.seatMapImageUrl ?? null);
       setTicketTypes(concert.ticketTypes ?? []);
     } else {
       setForm(EMPTY_FORM);
+      setCoverUrl(null);
+      setSeatMapUrl(null);
       setTicketTypes([]);
     }
     // Reset editor state khi modal đổi concert/mode
@@ -103,6 +324,8 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
     setEditingTypeId(null);
     setTypeForm(EMPTY_TYPE);
     setTypeError(null);
+    setCoverError(null);
+    setSeatMapError(null);
   }, [concert, mode]);
 
   // ─── Ticket type handlers ────────────────────────────────────────────────────
@@ -113,12 +336,13 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
     setTypeError(null);
     try {
       const created = await adminService.createTicketType(concert.id, typeForm);
-      setTicketTypes(prev => [...prev, created]);
+      setTicketTypes((prev) => [...prev, created]);
       setAddingType(false);
       setTypeForm(EMPTY_TYPE);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setTypeError(msg ?? 'Thêm loại vé thất bại');
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setTypeError(msg ?? "Thêm loại vé thất bại");
     } finally {
       setTypeLoading(false);
     }
@@ -129,28 +353,36 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
     setTypeLoading(true);
     setTypeError(null);
     try {
-      const updated = await adminService.updateTicketType(concert.id, typeId, typeForm);
-      setTicketTypes(prev => prev.map(t => t.id === typeId ? { ...t, ...updated } : t));
+      const updated = await adminService.updateTicketType(
+        concert.id,
+        typeId,
+        typeForm,
+      );
+      setTicketTypes((prev) =>
+        prev.map((t) => (t.id === typeId ? { ...t, ...updated } : t)),
+      );
       setEditingTypeId(null);
       setTypeForm(EMPTY_TYPE);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setTypeError(msg ?? 'Cập nhật loại vé thất bại');
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setTypeError(msg ?? "Cập nhật loại vé thất bại");
     } finally {
       setTypeLoading(false);
     }
   };
 
   const handleDeleteType = async (typeId: string) => {
-    if (!concert || !confirm('Xóa loại vé này?')) return;
+    if (!concert || !confirm("Xóa loại vé này?")) return;
     setTypeLoading(true);
     setTypeError(null);
     try {
       await adminService.deleteTicketType(concert.id, typeId);
-      setTicketTypes(prev => prev.filter(t => t.id !== typeId));
+      setTicketTypes((prev) => prev.filter((t) => t.id !== typeId));
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setTypeError(msg ?? 'Xóa loại vé thất bại');
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setTypeError(msg ?? "Xóa loại vé thất bại");
     } finally {
       setTypeLoading(false);
     }
@@ -159,7 +391,13 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
   const startEdit = (t: TicketType) => {
     setEditingTypeId(t.id);
     setAddingType(false);
-    setTypeForm({ name: t.name, price: t.price, totalQuantity: t.totalQuantity, maxPerUser: t.maxPerUser, colorCode: t.colorCode });
+    setTypeForm({
+      name: t.name,
+      price: t.price,
+      totalQuantity: t.totalQuantity,
+      maxPerUser: t.maxPerUser,
+      colorCode: t.colorCode,
+    });
     setTypeError(null);
   };
 
@@ -170,6 +408,47 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
     setTypeError(null);
   };
 
+  // ─── Image upload handlers ────────────────────────────────────────────────────
+
+  const handleCoverUpload = async (file: File) => {
+    if (!concert) return;
+    setCoverUploading(true);
+    setCoverError(null);
+    try {
+      const { coverImageUrl } = await adminService.uploadCoverImage(
+        concert.id,
+        file,
+      );
+      setCoverUrl(coverImageUrl);
+      // Sync vào form để handleSubmit không ghi đè URL cũ lên DB
+      setForm((prev) => ({ ...prev, coverImageUrl }));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setCoverError(msg ?? "Upload ảnh thất bại");
+    } finally {
+      setCoverUploading(false);
+    }
+  };
+
+  const handleSeatMapUpload = async (file: File) => {
+    if (!concert) return;
+    setSeatMapUploading(true);
+    setSeatMapError(null);
+    try {
+      const { seatMapImageUrl } = await adminService.uploadSeatMap(
+        concert.id,
+        file,
+      );
+      setSeatMapUrl(seatMapImageUrl);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setSeatMapError(msg ?? "Upload ảnh thất bại");
+    } finally {
+      setSeatMapUploading(false);
+    }
+  };
 
   const set =
     (k: keyof FormState) =>
@@ -191,58 +470,87 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         openTime: form.openTime,
         coverImageUrl: form.coverImageUrl || undefined,
       };
-      if (mode === 'edit' && concert) {
+      if (mode === "edit" && concert) {
         await adminService.updateConcert(concert.id, payload);
       } else {
         await adminService.createConcert(payload);
       }
       onSaved?.();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? (mode === 'edit' ? 'Cập nhật thất bại' : 'Tạo concert thất bại'));
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message;
+      setError(
+        msg ?? (mode === "edit" ? "Cập nhật thất bại" : "Tạo concert thất bại"),
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
   return (
     /* Figma: fixed overlay with bg-black/50 backdrop-blur-sm */
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative bg-white w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-
         {/* Header — Figma exact: sticky, border-b, title + X */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-          <h2 style={D} className="text-2xl font-black uppercase italic text-gray-900">
-            {mode === 'view' ? 'Chi tiết Concert' : mode === 'edit' ? 'Chỉnh sửa Concert' : 'Thêm Concert mới'}
+          <h2
+            style={D}
+            className="text-2xl font-black uppercase italic text-gray-900"
+          >
+            {mode === "view"
+              ? "Chi tiết Concert"
+              : mode === "edit"
+                ? "Chỉnh sửa Concert"
+                : "Thêm Concert mới"}
           </h2>
           <div className="flex items-center gap-2">
-            {mode === 'view' && onSwitchToEdit && (
-              <button onClick={onSwitchToEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition-colors">
+            {mode === "view" && onSwitchToEdit && (
+              <button
+                onClick={onSwitchToEdit}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+              >
                 <Pencil size={13} /> Chỉnh sửa
               </button>
             )}
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
               <X size={20} />
             </button>
           </div>
         </div>
 
         {/* VIEW MODE — same layout as create/edit but read-only */}
-        {mode === 'view' && concert && (
+        {mode === "view" && concert && (
           <div className="p-6 space-y-6">
             {/* Cover image — compact banner if exists */}
             {concert.coverImageUrl && (
-              <Link href={`/concert/${concert.id}`} className="block relative h-40 overflow-hidden group">
-                <img src={concert.coverImageUrl} alt={concert.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <Link
+                href={`/concert/${concert.id}`}
+                className="block relative h-40 overflow-hidden group"
+              >
+                <img
+                  src={concert.coverImageUrl}
+                  alt={concert.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <span className="absolute bottom-3 right-4 text-[10px] font-semibold text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">Xem trang công khai ↗</span>
+                <span className="absolute bottom-3 right-4 text-[10px] font-semibold text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Xem trang công khai ↗
+                </span>
               </Link>
             )}
 
@@ -250,11 +558,15 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Tên concert</label>
-                <p className="text-sm font-semibold text-gray-900">{concert.name}</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {concert.name}
+                </p>
               </div>
               <div>
                 <label className={labelCls}>Trạng thái</label>
-                <span className={`inline-block text-[11px] font-semibold border px-2.5 py-1 ${STATUS_STYLE[concert.status] ?? ''}`}>
+                <span
+                  className={`inline-block text-[11px] font-semibold border px-2.5 py-1 ${STATUS_STYLE[concert.status] ?? ""}`}
+                >
                   {STATUS_LABEL[concert.status] ?? concert.status}
                 </span>
               </div>
@@ -285,19 +597,33 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
               <div>
                 <label className={labelCls}>Ngày diễn</label>
                 <p className="text-sm text-gray-900">
-                  {new Date(concert.date).toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                  {new Date(concert.date).toLocaleDateString("vi-VN", {
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
               <div>
                 <label className={labelCls}>Mở bán lúc</label>
                 <p className="text-sm text-gray-900">
-                  {new Date(concert.openTime).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {new Date(concert.openTime).toLocaleString("vi-VN", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
               <div>
                 <label className={labelCls}>Giờ diễn</label>
                 <p className="text-sm text-gray-900">
-                  {new Date(concert.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(concert.date).toLocaleTimeString("vi-VN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </p>
               </div>
             </div>
@@ -305,29 +631,48 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
             {/* Row 5 — Description */}
             <div>
               <label className={labelCls}>Mô tả</label>
-              <p className="text-sm text-gray-600 leading-relaxed">{concert.description}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {concert.description}
+              </p>
             </div>
-
-
 
             {/* Row 7 — Ticket Types (read-only) */}
             {ticketTypes.length > 0 && (
               <div>
-                <label className={labelCls}>Loại vé ({ticketTypes.length})</label>
+                <label className={labelCls}>
+                  Loại vé ({ticketTypes.length})
+                </label>
                 <div className="flex flex-col gap-1.5">
-                  {ticketTypes.map(t => {
+                  {ticketTypes.map((t) => {
                     const remaining = t.totalQuantity - t.soldQuantity;
-                    const pct = t.totalQuantity > 0 ? Math.round((t.soldQuantity / t.totalQuantity) * 100) : 0;
+                    const pct =
+                      t.totalQuantity > 0
+                        ? Math.round((t.soldQuantity / t.totalQuantity) * 100)
+                        : 0;
                     return (
-                      <div key={t.id} className="grid grid-cols-[auto_1fr_80px_40px_90px] items-center gap-3 bg-gray-50 px-4 py-2.5">
-                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: t.colorCode || '#3b82f6' }} />
+                      <div
+                        key={t.id}
+                        className="grid grid-cols-[auto_1fr_80px_40px_90px] items-center gap-3 bg-gray-50 px-4 py-2.5"
+                      >
+                        <div
+                          className="w-2.5 h-2.5 rounded-sm"
+                          style={{ backgroundColor: t.colorCode || "#3b82f6" }}
+                        />
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-800">{t.name}</div>
-                          <div className="text-[11px] text-gray-400">Còn {remaining} · Tối đa {t.maxPerUser}/người</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {t.name}
+                          </div>
+                          <div className="text-[11px] text-gray-400">
+                            Còn {remaining} · Tối đa {t.maxPerUser}/người
+                          </div>
                         </div>
                         <MiniBar pct={pct} />
-                        <span className="text-[11px] font-semibold text-gray-500 text-right">{pct}%</span>
-                        <span className="text-sm font-bold text-gray-800 text-right">{fmt(t.price)}đ</span>
+                        <span className="text-[11px] font-semibold text-gray-500 text-right">
+                          {pct}%
+                        </span>
+                        <span className="text-sm font-bold text-gray-800 text-right">
+                          {fmt(t.price)}đ
+                        </span>
                       </div>
                     );
                   })}
@@ -339,10 +684,15 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
               <div className="text-[11px] text-gray-400">
                 Tạo {fmtTime(concert.createdAt)}
-                {concert.updatedAt && concert.updatedAt !== concert.createdAt && <span> · Sửa {fmtTime(concert.updatedAt)}</span>}
+                {concert.updatedAt &&
+                  concert.updatedAt !== concert.createdAt && (
+                    <span> · Sửa {fmtTime(concert.updatedAt)}</span>
+                  )}
               </div>
-              <button onClick={onClose}
-                className="px-6 py-3 border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
+              <button
+                onClick={onClose}
+                className="px-6 py-3 border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+              >
                 Đóng
               </button>
             </div>
@@ -350,17 +700,30 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
         )}
 
         {/* CREATE / EDIT MODE — Figma exact form structure */}
-        {mode !== 'view' && (
+        {mode !== "view" && (
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Tên concert *</label>
-                <input type="text" required value={form.name} onChange={set('name')} className={inputCls} placeholder="ANH TRAI SAY HI" />
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={set("name")}
+                  className={inputCls}
+                  placeholder="ANH TRAI SAY HI"
+                />
               </div>
               <div>
                 <label className={labelCls}>Phụ đề</label>
-                <input type="text" value={form.subtitle} onChange={set('subtitle')} className={inputCls} placeholder="ATSH Concert 2026" />
+                <input
+                  type="text"
+                  value={form.subtitle}
+                  onChange={set("subtitle")}
+                  className={inputCls}
+                  placeholder="ATSH Concert 2026"
+                />
               </div>
             </div>
 
@@ -368,11 +731,25 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Địa điểm *</label>
-                <input type="text" required value={form.venue} onChange={set('venue')} className={inputCls} placeholder="Sân Vận Động Mỹ Đình" />
+                <input
+                  type="text"
+                  required
+                  value={form.venue}
+                  onChange={set("venue")}
+                  className={inputCls}
+                  placeholder="Sân Vận Động Mỹ Đình"
+                />
               </div>
               <div>
                 <label className={labelCls}>Thành phố *</label>
-                <input type="text" required value={form.city} onChange={set('city')} className={inputCls} placeholder="Hà Nội" />
+                <input
+                  type="text"
+                  required
+                  value={form.city}
+                  onChange={set("city")}
+                  className={inputCls}
+                  placeholder="Hà Nội"
+                />
               </div>
             </div>
 
@@ -380,153 +757,402 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Mở bán vé lúc *</label>
-                <input type="datetime-local" required value={form.openTime} onChange={set('openTime')} className={inputCls} />
+                <input
+                  type="datetime-local"
+                  required
+                  value={form.openTime}
+                  onChange={set("openTime")}
+                  className={inputCls}
+                />
               </div>
               <div>
                 <label className={labelCls}>Ngày giờ diễn *</label>
-                <input type="datetime-local" required value={form.date} onChange={set('date')} className={inputCls} />
+                <input
+                  type="datetime-local"
+                  required
+                  value={form.date}
+                  onChange={set("date")}
+                  className={inputCls}
+                />
               </div>
             </div>
 
             {/* Row 4 — Description */}
             <div>
               <label className={labelCls}>Mô tả chi tiết *</label>
-              <textarea value={form.description} onChange={set('description')} rows={6} className={`${inputCls} resize-none`} placeholder="Mô tả chi tiết về sự kiện..." />
-              {mode === 'edit' && (
+              <textarea
+                value={form.description}
+                onChange={set("description")}
+                rows={6}
+                className={`${inputCls} resize-none`}
+                placeholder="Mô tả chi tiết về sự kiện..."
+              />
+              {mode === "edit" && (
                 <p className="text-xs text-gray-500 mt-2">
-                  Muốn tóm tắt tài liệu PDF (Press kit/Bio) tự động bằng AI và nối vào mô tả? Vào menu{' '}
-                  <Link href="/admin/ai-bio" className="text-blue-600 hover:underline font-medium">Tạo mô tả bằng AI</Link>.
+                  Muốn tóm tắt tài liệu PDF (Press kit/Bio) tự động bằng AI và
+                  nối vào mô tả? Vào menu{" "}
+                  <Link
+                    href="/admin/ai-bio"
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    Tạo mô tả bằng AI
+                  </Link>
+                  .
                 </p>
               )}
             </div>
 
-            {/* Row 5 — Cover URL */}
-            <div>
-              <label className={labelCls}>URL ảnh</label>
-              <input type="url" value={form.coverImageUrl} onChange={set('coverImageUrl')} className={inputCls} placeholder="https://..." />
-            </div>
+            {/* Row 5 — Cover Image */}
+            {mode === "edit" && concert ? (
+              <div className="border-t border-gray-100 pt-6">
+                <ImageUploadField
+                  label="Ảnh concert"
+                  hint="Hiển thị trên trang chủ và trang chi tiết concert"
+                  imageUrl={coverUrl}
+                  uploading={coverUploading}
+                  error={coverError}
+                  onFile={handleCoverUpload}
+                  previewMaxHeight={240}
+                />
+              </div>
+            ) : (
+              <div>
+                <label className={labelCls}>URL ảnh</label>
+                <input
+                  type="url"
+                  value={form.coverImageUrl}
+                  onChange={set("coverImageUrl")}
+                  className={inputCls}
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+
+            {/* Row 6 — Seat Map (chỉ edit mode — cần concertId) */}
+            {mode === "edit" && concert && (
+              <div className="border-t border-gray-100 pt-6">
+                <ImageUploadField
+                  label="Sơ đồ chỗ ngồi"
+                  hint="Hiển thị trên trang đặt vé để khán giả tham khảo vị trí khu vực"
+                  imageUrl={seatMapUrl}
+                  uploading={seatMapUploading}
+                  error={seatMapError}
+                  onFile={handleSeatMapUpload}
+                  previewMaxHeight={480}
+                  previewLabel="Sơ đồ chỗ ngồi"
+                  previewNote="Dùng ảnh này làm tham chiếu khi tạo các Loại vé bên dưới."
+                />
+              </div>
+            )}
 
             {/* Row 7 — Ticket Types (chỉ hiển thị khi edit concert đã tồn tại) */}
-            {mode === 'edit' && concert && (
+            {mode === "edit" && concert && (
               <div className="border-t border-gray-100 pt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <label className={labelCls}>Loại vé ({ticketTypes.length})</label>
+                  <label className={labelCls}>
+                    Loại vé ({ticketTypes.length})
+                  </label>
                   {!addingType && !editingTypeId && (
-                    <button type="button" onClick={() => { setAddingType(true); setTypeForm(EMPTY_TYPE); setTypeError(null); }}
-                      className="flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-gray-900 border border-gray-200 px-2.5 py-1 hover:bg-gray-50 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddingType(true);
+                        setTypeForm(EMPTY_TYPE);
+                        setTypeError(null);
+                      }}
+                      className="flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-gray-900 border border-gray-200 px-2.5 py-1 hover:bg-gray-50 transition-colors"
+                    >
                       <Plus size={11} /> Thêm loại vé
                     </button>
                   )}
                 </div>
 
                 {typeError && (
-                  <div className="bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600 font-medium mb-2">{typeError}</div>
+                  <div className="bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-600 font-medium mb-2">
+                    {typeError}
+                  </div>
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                  {ticketTypes.map(t => {
+                  {ticketTypes.map((t) => {
                     const remaining = t.totalQuantity - t.soldQuantity;
-                    const pct = t.totalQuantity > 0 ? Math.round((t.soldQuantity / t.totalQuantity) * 100) : 0;
+                    const pct =
+                      t.totalQuantity > 0
+                        ? Math.round((t.soldQuantity / t.totalQuantity) * 100)
+                        : 0;
                     if (editingTypeId === t.id) {
                       return (
-                        <div key={t.id} className="border border-gray-300 bg-gray-50 p-3 flex flex-col gap-2">
+                        <div
+                          key={t.id}
+                          className="border border-gray-300 bg-gray-50 p-3 flex flex-col gap-2"
+                        >
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Tên loại vé *</label>
-                              <input value={typeForm.name} onChange={e => setTypeForm(p => ({ ...p, name: e.target.value }))}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" />
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                Tên loại vé *
+                              </label>
+                              <input
+                                value={typeForm.name}
+                                onChange={(e) =>
+                                  setTypeForm((p) => ({
+                                    ...p,
+                                    name: e.target.value,
+                                  }))
+                                }
+                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                              />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá (VNĐ) *</label>
-                              <input type="number" min={0} value={typeForm.price} onChange={e => setTypeForm(p => ({ ...p, price: Number(e.target.value) }))}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" />
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                Giá (VNĐ) *
+                              </label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={typeForm.price}
+                                onChange={(e) =>
+                                  setTypeForm((p) => ({
+                                    ...p,
+                                    price: Number(e.target.value),
+                                  }))
+                                }
+                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                              />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Tổng SL * (đã bán: {t.soldQuantity})</label>
-                              <input type="number" min={t.soldQuantity || 1} value={typeForm.totalQuantity} onChange={e => setTypeForm(p => ({ ...p, totalQuantity: Number(e.target.value) }))}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" />
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                Tổng SL * (đã bán: {t.soldQuantity})
+                              </label>
+                              <input
+                                type="number"
+                                min={t.soldQuantity || 1}
+                                value={typeForm.totalQuantity}
+                                onChange={(e) =>
+                                  setTypeForm((p) => ({
+                                    ...p,
+                                    totalQuantity: Number(e.target.value),
+                                  }))
+                                }
+                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                              />
                             </div>
                             <div>
-                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Max/người</label>
-                              <input type="number" min={1} max={10} value={typeForm.maxPerUser} onChange={e => setTypeForm(p => ({ ...p, maxPerUser: Number(e.target.value) }))}
-                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" />
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                Max/người
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={10}
+                                value={typeForm.maxPerUser}
+                                onChange={(e) =>
+                                  setTypeForm((p) => ({
+                                    ...p,
+                                    maxPerUser: Number(e.target.value),
+                                  }))
+                                }
+                                className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                              />
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Màu</label>
-                            <input type="color" value={typeForm.colorCode} onChange={e => setTypeForm(p => ({ ...p, colorCode: e.target.value }))}
-                              className="h-7 w-10 border border-gray-200 cursor-pointer" />
-                            <span className="text-xs text-gray-500">{typeForm.colorCode}</span>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                              Màu
+                            </label>
+                            <input
+                              type="color"
+                              value={typeForm.colorCode}
+                              onChange={(e) =>
+                                setTypeForm((p) => ({
+                                  ...p,
+                                  colorCode: e.target.value,
+                                }))
+                              }
+                              className="h-7 w-10 border border-gray-200 cursor-pointer"
+                            />
+                            <span className="text-xs text-gray-500">
+                              {typeForm.colorCode}
+                            </span>
                           </div>
                           <div className="flex gap-2 justify-end">
-                            <button type="button" onClick={cancelTypeEdit} className="px-3 py-1.5 text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition-colors">Hủy</button>
-                            <button type="button" onClick={() => handleUpdateType(t.id)} disabled={typeLoading}
-                              className="px-3 py-1.5 text-xs font-bold bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50">
-                              {typeLoading ? 'Đang lưu...' : 'Lưu'}
+                            <button
+                              type="button"
+                              onClick={cancelTypeEdit}
+                              className="px-3 py-1.5 text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition-colors"
+                            >
+                              Hủy
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateType(t.id)}
+                              disabled={typeLoading}
+                              className="px-3 py-1.5 text-xs font-bold bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
+                            >
+                              {typeLoading ? "Đang lưu..." : "Lưu"}
                             </button>
                           </div>
                         </div>
                       );
                     }
                     return (
-                      <div key={t.id} className="grid grid-cols-[auto_1fr_80px_40px_90px_auto] items-center gap-3 bg-gray-50 px-4 py-2.5">
-                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: t.colorCode || '#3b82f6' }} />
+                      <div
+                        key={t.id}
+                        className="grid grid-cols-[auto_1fr_80px_40px_90px_auto] items-center gap-3 bg-gray-50 px-4 py-2.5"
+                      >
+                        <div
+                          className="w-2.5 h-2.5 rounded-sm"
+                          style={{ backgroundColor: t.colorCode || "#3b82f6" }}
+                        />
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-gray-800">{t.name}</div>
-                          <div className="text-[11px] text-gray-400">Còn {remaining} · Tối đa {t.maxPerUser}/người</div>
+                          <div className="text-sm font-semibold text-gray-800">
+                            {t.name}
+                          </div>
+                          <div className="text-[11px] text-gray-400">
+                            Còn {remaining} · Tối đa {t.maxPerUser}/người
+                          </div>
                         </div>
                         <MiniBar pct={pct} />
-                        <span className="text-[11px] font-semibold text-gray-500 text-right">{pct}%</span>
-                        <span className="text-sm font-bold text-gray-800 text-right">{fmt(t.price)}đ</span>
+                        <span className="text-[11px] font-semibold text-gray-500 text-right">
+                          {pct}%
+                        </span>
+                        <span className="text-sm font-bold text-gray-800 text-right">
+                          {fmt(t.price)}đ
+                        </span>
                         <div className="flex gap-1">
-                          <button type="button" onClick={() => startEdit(t)} title="Sửa"
-                            className="p-1 text-gray-400 hover:text-gray-700 transition-colors"><Pencil size={13} /></button>
-                          <button type="button" onClick={() => handleDeleteType(t.id)} disabled={typeLoading} title="Xóa"
-                            className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-40"><Trash2 size={13} /></button>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(t)}
+                            title="Sửa"
+                            className="p-1 text-gray-400 hover:text-gray-700 transition-colors"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteType(t.id)}
+                            disabled={typeLoading}
+                            title="Xóa"
+                            className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-40"
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </div>
                     );
                   })}
 
                   {ticketTypes.length === 0 && !addingType && (
-                    <p className="text-xs text-gray-400 py-2">Chưa có loại vé nào.</p>
+                    <p className="text-xs text-gray-400 py-2">
+                      Chưa có loại vé nào.
+                    </p>
                   )}
 
                   {addingType && (
                     <div className="border border-gray-300 bg-gray-50 p-3 flex flex-col gap-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Tên loại vé *</label>
-                          <input value={typeForm.name} onChange={e => setTypeForm(p => ({ ...p, name: e.target.value }))}
-                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" placeholder="VIP" />
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                            Tên loại vé *
+                          </label>
+                          <input
+                            value={typeForm.name}
+                            onChange={(e) =>
+                              setTypeForm((p) => ({
+                                ...p,
+                                name: e.target.value,
+                              }))
+                            }
+                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                            placeholder="VIP"
+                          />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Giá (VNĐ) *</label>
-                          <input type="number" min={0} value={typeForm.price} onChange={e => setTypeForm(p => ({ ...p, price: Number(e.target.value) }))}
-                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" />
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                            Giá (VNĐ) *
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={typeForm.price}
+                            onChange={(e) =>
+                              setTypeForm((p) => ({
+                                ...p,
+                                price: Number(e.target.value),
+                              }))
+                            }
+                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                          />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Tổng số lượng *</label>
-                          <input type="number" min={1} value={typeForm.totalQuantity} onChange={e => setTypeForm(p => ({ ...p, totalQuantity: Number(e.target.value) }))}
-                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" />
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                            Tổng số lượng *
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={typeForm.totalQuantity}
+                            onChange={(e) =>
+                              setTypeForm((p) => ({
+                                ...p,
+                                totalQuantity: Number(e.target.value),
+                              }))
+                            }
+                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                          />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Max/người</label>
-                          <input type="number" min={1} max={10} value={typeForm.maxPerUser} onChange={e => setTypeForm(p => ({ ...p, maxPerUser: Number(e.target.value) }))}
-                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400" />
+                          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                            Max/người
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={typeForm.maxPerUser}
+                            onChange={(e) =>
+                              setTypeForm((p) => ({
+                                ...p,
+                                maxPerUser: Number(e.target.value),
+                              }))
+                            }
+                            className="w-full px-2 py-1.5 text-sm border border-gray-200 bg-white focus:outline-none focus:border-gray-400"
+                          />
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Màu</label>
-                        <input type="color" value={typeForm.colorCode} onChange={e => setTypeForm(p => ({ ...p, colorCode: e.target.value }))}
-                          className="h-7 w-10 border border-gray-200 cursor-pointer" />
-                        <span className="text-xs text-gray-500">{typeForm.colorCode}</span>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          Màu
+                        </label>
+                        <input
+                          type="color"
+                          value={typeForm.colorCode}
+                          onChange={(e) =>
+                            setTypeForm((p) => ({
+                              ...p,
+                              colorCode: e.target.value,
+                            }))
+                          }
+                          className="h-7 w-10 border border-gray-200 cursor-pointer"
+                        />
+                        <span className="text-xs text-gray-500">
+                          {typeForm.colorCode}
+                        </span>
                       </div>
                       <div className="flex gap-2 justify-end">
-                        <button type="button" onClick={cancelTypeEdit} className="px-3 py-1.5 text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition-colors">Hủy</button>
-                        <button type="button" onClick={handleAddType} disabled={typeLoading || !typeForm.name}
-                          className="px-3 py-1.5 text-xs font-bold bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50">
-                          {typeLoading ? 'Đang thêm...' : 'Thêm'}
+                        <button
+                          type="button"
+                          onClick={cancelTypeEdit}
+                          className="px-3 py-1.5 text-xs font-semibold border border-gray-200 hover:bg-gray-50 transition-colors"
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAddType}
+                          disabled={typeLoading || !typeForm.name}
+                          className="px-3 py-1.5 text-xs font-bold bg-gray-900 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
+                        >
+                          {typeLoading ? "Đang thêm..." : "Thêm"}
                         </button>
                       </div>
                     </div>
@@ -536,20 +1162,32 @@ export default function ConcertModal({ mode, concert, onClose, onSaved, onSwitch
             )}
 
             {error && (
-              <div className="bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium">{error}</div>
+              <div className="bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium">
+                {error}
+              </div>
             )}
 
             {/* Actions — Figma exact: flex gap-3, border-t */}
             <div className="flex gap-3 pt-4 border-t border-gray-200">
-              <button type="button" onClick={onClose}
-                className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-6 py-3 border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+              >
                 Hủy
               </button>
-              <button type="submit" disabled={isLoading}
-                className="flex-1 px-6 py-3 bg-gray-900 text-white font-bold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 px-6 py-3 bg-gray-900 text-white font-bold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {isLoading
-                  ? (mode === 'edit' ? 'Đang cập nhật...' : 'Đang tạo...')
-                  : (mode === 'edit' ? 'Lưu thay đổi' : 'Thêm concert')}
+                  ? mode === "edit"
+                    ? "Đang cập nhật..."
+                    : "Đang tạo..."
+                  : mode === "edit"
+                    ? "Lưu thay đổi"
+                    : "Thêm concert"}
               </button>
             </div>
           </form>
