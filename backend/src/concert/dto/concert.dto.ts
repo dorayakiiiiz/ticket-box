@@ -32,6 +32,10 @@ export class CreateConcertDto {
   @IsString()
   @IsOptional()
   coverImageUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  seatMapImageUrl?: string;
 }
 
 export class UpdateConcertDto {
@@ -66,6 +70,10 @@ export class UpdateConcertDto {
   @IsString()
   @IsOptional()
   coverImageUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  seatMapImageUrl?: string;
 
   @IsEnum(ConcertStatus)
   @IsOptional()

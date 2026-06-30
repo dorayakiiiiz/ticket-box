@@ -21,6 +21,7 @@ export type Concert = {
   city: string;
   date: string;
   coverImageUrl: string | null;
+  seatMapImageUrl: string | null;
   openTime: string;
   status: ConcertStatus;
   aiStatus: AiStatus;

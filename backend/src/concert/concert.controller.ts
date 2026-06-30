@@ -9,12 +9,22 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from 'src/entities/user.entity';
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // Multer fileFilter — chặn non-PDF trước khi load vào memory
 const pdfFileFilter = (_req: any, file: Express.Multer.File, cb: any) => {
   const isPdf = file.mimetype === 'application/pdf' && file.originalname.toLowerCase().endsWith('.pdf');
   if (!isPdf) {
     return cb(new BadRequestException('Chỉ chấp nhận file PDF'), false);
+  }
+  cb(null, true);
+};
+
+// Multer fileFilter — chỉ chấp nhận ảnh
+const imageFileFilter = (_req: any, file: Express.Multer.File, cb: any) => {
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (!allowedMimes.includes(file.mimetype)) {
+    return cb(new BadRequestException('Chỉ chấp nhận file ảnh (JPEG, PNG, WebP, GIF)'), false);
   }
   cb(null, true);
 };
@@ -75,6 +85,38 @@ export class ConcertController {
   @Post(':id/reset-bio')
   resetBio(@Param('id') id: string, @Req() req: any) {
     return this.concertService.resetBioStatus(id, req.user);
+  }
+
+  @Post(':id/upload-seat-map')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', {
+    storage: memoryStorage(),
+    fileFilter: imageFileFilter,
+    limits: { fileSize: MAX_IMAGE_SIZE },
+  }))
+  uploadSeatMap(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    if (!file) throw new BadRequestException('Vui lòng chọn file ảnh');
+    return this.concertService.uploadSeatMap(id, file, req.user);
+  }
+
+  @Post(':id/upload-cover-image')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', {
+    storage: memoryStorage(),
+    fileFilter: imageFileFilter,
+    limits: { fileSize: MAX_IMAGE_SIZE },
+  }))
+  uploadCoverImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    if (!file) throw new BadRequestException('Vui lòng chọn file ảnh');
+    return this.concertService.uploadCoverImage(id, file, req.user);
   }
 
   @Delete(':id')
