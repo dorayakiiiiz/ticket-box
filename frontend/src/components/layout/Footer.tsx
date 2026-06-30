@@ -25,6 +25,7 @@ export default function Footer() {
               <div className="text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase text-gray-500 mb-4">ĐỒ ÁN MÔN HỌC</div>
               <div className="flex flex-col gap-2.5">
                 <div className="text-[12px] md:text-sm text-gray-400">Môn học: System Design</div>
+                <div className="text-[12px] md:text-sm text-gray-400">Khoa Công nghệ thông tin</div>
                 <div className="text-[12px] md:text-sm text-gray-400">Trường Đại học Khoa học Tự nhiên, ĐHQG-HCM</div>
               </div>
             </div>
