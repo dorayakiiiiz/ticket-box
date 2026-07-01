@@ -698,9 +698,4 @@ class DatabaseHelper {
     );
   }
 
-  // Xóa bảng sync_queue cũ (dùng khi cần)
-  Future<void> dropOldSyncQueue() async {
-    final db = await database;
-    await db.execute('DROP TABLE IF EXISTS sync_queue');
-  }
 }

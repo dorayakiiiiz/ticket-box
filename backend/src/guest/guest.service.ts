@@ -96,7 +96,7 @@ export class GuestService {
         id: guest.id,
         guestCode: guest.guestCode,
         fullName: guest.fullName,
-        updatedAt: guest.updatedAt, // ✅ Trả về updatedAt
+        updatedAt: guest.updatedAt, 
       },
     };
   }
@@ -125,7 +125,7 @@ export class GuestService {
     }
 
     if (hasChanges) {
-      guest.updatedAt = new Date(); // ✅ Set thủ công mỗi khi có thay đổi
+      guest.updatedAt = new Date(); 
       await this.guestRepo.save(guest);
     }
 
@@ -188,8 +188,8 @@ export class GuestService {
               guestCode,
               concert,
               isCheckedIn: false,
-              createdAt: new Date(), // ✅ Set thủ công
-              updatedAt: new Date(), // ✅ Set thủ công
+              createdAt: new Date(), 
+              updatedAt: new Date(), 
             };
 
             if (email && email.trim()) guest.email = email.trim();
@@ -202,7 +202,7 @@ export class GuestService {
               batchData.length = 0;
 
               try {
-                // ✅ Cập nhật updatedAt cho batch insert
+                
                 await this.guestRepo
                   .createQueryBuilder()
                   .insert()
@@ -212,7 +212,7 @@ export class GuestService {
                     ['fullName', 'email', 'phone', 'updatedAt'],
                     ['guestCode']
                   )
-                  .setParameter('updatedAt', new Date()) // ✅ Set giá trị mới
+                  .setParameter('updatedAt', new Date()) 
                   .execute();
                 successCount += dataToInsert.length;
                 this.logger.debug({ count: dataToInsert.length }, 'Batch inserted');
@@ -220,7 +220,7 @@ export class GuestService {
                 this.logger.error({ err }, 'Batch insert failed, falling back to single insert');
                 for (const g of dataToInsert) {
                   try {
-                    g.updatedAt = new Date(); // ✅ Set thủ công
+                    g.updatedAt = new Date(); 
                     await this.guestRepo.save(g);
                     successCount++;
                   } catch (e) {
@@ -246,7 +246,7 @@ export class GuestService {
 
           if (batchData.length > 0) {
             try {
-              // ✅ Cập nhật updatedAt cho final batch
+            
               await this.guestRepo
                 .createQueryBuilder()
                 .insert()
@@ -256,7 +256,7 @@ export class GuestService {
                   ['fullName', 'email', 'phone', 'updatedAt'],
                   ['guestCode']
                 )
-                .setParameter('updatedAt', new Date()) // ✅ Set giá trị mới
+                .setParameter('updatedAt', new Date())
                 .execute();
               successCount += batchData.length;
               this.logger.debug({ count: batchData.length }, 'Final batch inserted');
@@ -275,7 +275,7 @@ export class GuestService {
             }
           }
 
-          this.logger.info({ successCount, errorCount, totalRows }, '✅ CSV import complete');
+          this.logger.info({ successCount, errorCount, totalRows }, ' CSV import complete');
 
           resolve({
             message: 'Import CSV thành công',
@@ -329,8 +329,9 @@ export class GuestService {
     }
 
     guest.isCheckedIn = true;
-    guest.updatedAt = new Date(); // ✅ Set thủ công
+    guest.updatedAt = new Date(); 
     await this.guestRepo.save(guest);
+    
 
     return {
       success: true,
@@ -367,7 +368,7 @@ export class GuestService {
         .orderBy('guest.updatedAt', 'DESC')
         .getMany();
 
-      console.log(`✅ Found ${guests.length} guests updated since ${since.toISOString()}`);
+      console.log(`[UPDATE] Found ${guests.length} guests updated since ${since.toISOString()}`);
 
       return guests.map(guest => ({
         id: guest.id,

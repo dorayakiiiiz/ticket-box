@@ -159,7 +159,7 @@ export class TicketService {
    * Đồng bộ hàng loạt từ sync_queue - Đưa vào Queue xử lý bất đồng bộ
    */
   async batchSync(items: any[]) {
-    // 🔥 Đưa vào Queue thay vì xử lý trực tiếp
+    // Đưa vào Queue thay vì xử lý trực tiếp
     const job = await this.syncQueue.add('process-batch-sync', {
       items,
       syncedAt: new Date().toISOString(),
@@ -177,7 +177,7 @@ export class TicketService {
    * Kéo các thay đổi từ Server (từ lần sync cuối)
    */
   async getChangesSince(concertId: string, since: Date) {
-    console.log('🔍 [getChangesSince]', {
+    console.log('[getChangesSince]', {
       concertId,
       since: since.toISOString(), 
     });

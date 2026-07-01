@@ -28,4 +28,5 @@ export class Guest {
 
   @UpdateDateColumn()
   updatedAt: Date;
+  
 }

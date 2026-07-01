@@ -79,7 +79,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = await _dbHelper.getUser();
       setState(() {
         _currentUser = user;
@@ -248,23 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
-  void _navigateToScanner() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ScannerScreen(),
-      ),
-    );
-  }
-
-  void _navigateToHistory() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const HistoryScreen(),
-      ),
-    );
-  }
-
+ 
   void _navigateToGuestList() {
     Navigator.of(context).push(
       MaterialPageRoute(
