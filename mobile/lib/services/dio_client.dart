@@ -20,8 +20,8 @@ class DioClient {
     // Public Dio
     _publicDio = Dio(
       BaseOptions(
-        //baseUrl: 'http://10.0.2.2:8080',
-        baseUrl: 'https://ticket-box-q762.onrender.com',
+        baseUrl: 'http://10.0.2.2:8080',
+        //baseUrl: 'https://ticket-box-q762.onrender.com',
         connectTimeout: const Duration(seconds: 60),
         receiveTimeout: const Duration(seconds: 60),
         headers: {'Content-Type': 'application/json'},
@@ -32,8 +32,8 @@ class DioClient {
     // Private Dio
     _privateDio = Dio(
       BaseOptions(
-        //baseUrl: 'http://10.0.2.2:8080',
-        baseUrl: 'https://api-ticketbox.onrender.com',
+        baseUrl: 'http://10.0.2.2:8080',
+        //baseUrl: 'https://ticket-box-q762.onrender.com',
         connectTimeout: const Duration(seconds: 60),
         receiveTimeout: const Duration(seconds: 60),
         headers: {'Content-Type': 'application/json'},

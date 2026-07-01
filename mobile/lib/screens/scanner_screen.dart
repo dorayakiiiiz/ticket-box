@@ -26,7 +26,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool _hasPermission = false;
   String? _lastScannedCode;
   bool _isProcessing = false;
-  bool _isSyncing = false;
   bool _isLoading = true;
 
   bool _scanningStarted = false;
@@ -34,8 +33,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
   // Thống kê
   int _totalTickets = 0;
   int _totalScanned = 0;
-
-  bool _isOnline = true;
 
   // Thông tin concert
   String _concertId = '';
@@ -240,61 +237,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) Navigator.pop(context);
     });
-  }
-
-  Future<void> _syncOffline() async {
-    if (_isSyncing) return;
-
-    setState(() {
-      _isSyncing = true;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đang đồng bộ vé...'),
-        backgroundColor: Colors.blueAccent,
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    try {
-      final ticketProvider = Provider.of<TicketProvider>(context, listen: false);
-
-      final success = await ticketProvider.syncTickets(_concertId);
-
-      if (success && mounted) {
-        await _loadStats();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đồng bộ thành công! Dữ liệu đã sẵn sàng để soát vé offline.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ticketProvider.syncError ?? 'Đồng bộ thất bại'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Lỗi: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSyncing = false;
-        });
-      }
-    }
   }
 
   void _showHistory() {

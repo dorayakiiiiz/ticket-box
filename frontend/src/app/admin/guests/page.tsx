@@ -186,7 +186,7 @@ function AdminDeleteGuestModal({ guest, onClose, onSuccess }: { guest: GuestData
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="relative bg-white border border-red-200 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 style={D} className="text-xl font-black uppercase italic text-red-600">Xóa khách mời</h2>
+          <h2 style={D} className="text-xl font-black italic text-red-600">Xóa khách mời</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
         </div>
         <div className="p-6">
@@ -196,12 +196,12 @@ function AdminDeleteGuestModal({ guest, onClose, onSuccess }: { guest: GuestData
           </div>
           <div className="mb-5">
             <label className="block text-[10px] font-bold uppercase tracking-[0.15em] text-gray-500 mb-2">
-              Nhập <span className="text-red-600 font-black">{guest.name.toUpperCase()}</span> để xác nhận
+              Nhập <span className="text-red-600 font-black">{guest.name}</span> để xác nhận
             </label>
             <input
               value={confirmName}
               onChange={e => setConfirmName(e.target.value)}
-              placeholder={guest.name.toUpperCase()}
+              placeholder={guest.name}
               className="w-full border border-gray-200 text-gray-900 text-sm px-4 py-3 outline-none focus:border-red-300 transition-colors placeholder-gray-300"
             />
           </div>
