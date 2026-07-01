@@ -415,13 +415,10 @@ export default function ConcertModal({
     setCoverUploading(true);
     setCoverError(null);
     try {
-      const { coverImageUrl } = await adminService.uploadCoverImage(
-        concert.id,
-        file,
-      );
-      setCoverUrl(coverImageUrl);
+      const { imageUrl } = await adminService.uploadConcertImage(concert.id, file, 'cover');
+      setCoverUrl(imageUrl);
       // Sync vào form để handleSubmit không ghi đè URL cũ lên DB
-      setForm((prev) => ({ ...prev, coverImageUrl }));
+      setForm((prev) => ({ ...prev, coverImageUrl: imageUrl }));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;
@@ -436,11 +433,8 @@ export default function ConcertModal({
     setSeatMapUploading(true);
     setSeatMapError(null);
     try {
-      const { seatMapImageUrl } = await adminService.uploadSeatMap(
-        concert.id,
-        file,
-      );
-      setSeatMapUrl(seatMapImageUrl);
+      const { imageUrl } = await adminService.uploadConcertImage(concert.id, file, 'seatMap');
+      setSeatMapUrl(imageUrl);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;
@@ -449,6 +443,7 @@ export default function ConcertModal({
       setSeatMapUploading(false);
     }
   };
+
 
   const set =
     (k: keyof FormState) =>
