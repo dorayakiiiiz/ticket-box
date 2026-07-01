@@ -11,7 +11,7 @@ Vì vậy, module này cần phải được thiết kế vừa linh hoạt vớ
 **Các thành phần tham gia:**
 
 | Thành phần      | File nguồn                   | Chức năng                                                       
-|                 |                              |                                                                 
+|------------|------------|-----------|                                                           
 | GuestController | `guest.controller.ts`        | Định tuyến endpoint upload CSV và các API CRUD guest            
 | GuestService    | `guest.service.ts`           | Parse CSV stream, tạo/cập nhật guest, tính thống kê import      
 | Guest Entity    | `entities/guest.entity.ts`   | Schema: fullName, email, phone, guestCode, isCheckedIn, concert 
