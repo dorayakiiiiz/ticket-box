@@ -98,22 +98,12 @@ export const adminService = {
     return res.data;
   },
 
-  // Upload file ảnh sơ đồ chỗ ngồi lên Supabase Storage
-  uploadSeatMap: async (concertId: string, file: File): Promise<{ seatMapImageUrl: string }> => {
+  // Upload ảnh concert (cover) hoặc sơ đồ chỗ ngồi (seatMap) lên Supabase Storage
+  // type: 'cover' | 'seatMap' — backend phân biệt qua query param
+  uploadConcertImage: async (concertId: string, file: File, type: 'cover' | 'seatMap'): Promise<{ imageUrl: string }> => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await apiClient.post(`/concerts/${concertId}/upload-seat-map`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 30_000,
-    });
-    return res.data;
-  },
-
-  // Upload file ảnh bìa (cover) concert lên Supabase Storage
-  uploadCoverImage: async (concertId: string, file: File): Promise<{ coverImageUrl: string }> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await apiClient.post(`/concerts/${concertId}/upload-cover-image`, formData, {
+    const res = await apiClient.post(`/concerts/${concertId}/upload-image?type=${type}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 30_000,
     });

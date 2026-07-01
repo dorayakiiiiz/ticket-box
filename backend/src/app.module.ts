@@ -15,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
 import { ConcertModule } from './concert/concert.module';
 import { BookingModule } from './booking/booking.module';
 import { AdminModule } from './admin/admin.module';
+import { StorageModule } from './storage/storage.module';
 import { GuestModule } from './guest/guest.module';
 import { RedisModule, getRedisConnectionToken } from '@nestjs-modules/ioredis';
 import { User } from './entities/user.entity';
@@ -124,6 +125,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     NotificationModule,
     GuestModule,
     AdminModule,
+    StorageModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
