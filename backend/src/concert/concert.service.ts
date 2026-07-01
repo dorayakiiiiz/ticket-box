@@ -4,7 +4,6 @@ import {
   ForbiddenException,
   ConflictException,
   BadRequestException,
-  InternalServerErrorException,
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -14,7 +13,6 @@ import type { Queue } from 'bullmq';
 import type Redis from 'ioredis';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { ConfigService } from '@nestjs/config';
-import { createClient } from '@supabase/supabase-js';
 import { Concert } from '../entities/concert.entity';
 import { TicketType } from '../entities/ticket-type.entity';
 import { Order, OrderStatus } from '../entities/order.entity';
@@ -22,12 +20,23 @@ import { UserRole } from '../entities/user.entity';
 import { CreateConcertDto, UpdateConcertDto } from './dto/concert.dto';
 import { CreateTicketTypeDto, UpdateTicketTypeDto } from './dto/ticket-type.dto';
 import { InjectRedis } from '@nestjs-modules/ioredis';
+import { StorageService } from '../storage/storage.service';
 
 const AI_BIO_QUEUE = 'ticketbox.concert.ai-bio';
+
 
 // Key pattern cho Redis, dùng chung với Phase 3 (booking)
 // ticket_type:{id}:available — số vé còn lại của loại vé tương ứng
 const redisKey = (ticketTypeId: string) => `ticket_type:${ticketTypeId}:available`;
+
+// Config map: ánh xạ type → bucket Supabase + column DB
+// Tập trung tại 1 chỗ — thêm loại ảnh mới chỉ cần thêm 1 entry
+const IMAGE_CONFIG = {
+  cover:   { bucket: 'cover-images', prefix: 'cover',    dbField: 'coverImageUrl'   as const },
+  seatMap: { bucket: 'seat-maps',    prefix: 'seat-map', dbField: 'seatMapImageUrl' as const },
+} as const;
+
+type ImageType = keyof typeof IMAGE_CONFIG;
 
 @Injectable()
 export class ConcertService implements OnApplicationBootstrap {
@@ -40,7 +49,9 @@ export class ConcertService implements OnApplicationBootstrap {
     @InjectQueue(AI_BIO_QUEUE) private readonly aiBioQueue: Queue,
     @InjectRedis() private readonly redis: Redis,
     private readonly configService: ConfigService,
+    private readonly storageService: StorageService,
   ) {}
+
 
   // Hàm tính toán số lượng vé thực tế từ DB bao gồm cả vé đang bị giam (PENDING)
   private async calculateAvailableFromDB(ticketType: TicketType): Promise<number> {
@@ -196,84 +207,48 @@ export class ConcertService implements OnApplicationBootstrap {
     return { message: 'Đã reset AI Bio status' };
   }
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-  /** Upload buffer lên Supabase Storage, tự tạo bucket nếu chưa có. Trả về publicUrl. */
-  private async uploadImageToSupabase(
-    bucket: string,
-    fileName: string,
-    file: Express.Multer.File,
-  ): Promise<string> {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseKey = this.configService.get<string>('SUPABASE_SECRET_KEY');
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new InternalServerErrorException('Supabase chưa được cấu hình');
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Tự tạo bucket nếu chưa tồn tại (idempotent)
-    const { data: existingBucket } = await supabase.storage.getBucket(bucket);
-    if (!existingBucket) {
-      const { error: bucketErr } = await supabase.storage.createBucket(bucket, {
-        public: true,
-        fileSizeLimit: 10 * 1024 * 1024, // 10MB
-        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-      });
-      if (bucketErr) {
-        this.logger.error({ bucketErr }, `Failed to create Supabase bucket: ${bucket}`);
-        throw new InternalServerErrorException('Không thể tạo bucket storage');
-      }
-    }
-
-    const { error: uploadErr } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, file.buffer, {
-        contentType: file.mimetype,
-        upsert: true,
-      });
-
-    if (uploadErr) {
-      this.logger.error({ uploadErr }, `Failed to upload to Supabase bucket: ${bucket}`);
-      throw new InternalServerErrorException('Upload ảnh thất bại');
-    }
-
-    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
-    return urlData.publicUrl;
-  }
-
   // ─── Image Uploads ────────────────────────────────────────────────────────────
 
-  async uploadSeatMap(id: string, file: Express.Multer.File, user: { id: string; role: UserRole }): Promise<{ seatMapImageUrl: string }> {
+  /**
+   * Hàm upload ảnh duy nhất dùng chung cho cover và seat map.
+   * - Garbage Collection: xóa file cũ trên Supabase trước khi lưu URL mới.
+   * - Ưu tiên delete best-effort: nếu delete thất bại, vẫn tiếp tục upload ảnh mới.
+   */
+  async uploadImage(
+    id: string,
+    file: Express.Multer.File,
+    type: ImageType,
+    user: { id: string; role: UserRole },
+  ): Promise<{ imageUrl: string }> {
     if (user.role !== UserRole.ORGANIZER) {
-      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền upload sơ đồ chỗ ngồi');
+      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền upload ảnh');
     }
-    await this.findOne(id);
+
+    const concert = await this.findOne(id);
+    const cfg = IMAGE_CONFIG[type];
+
+    // ── Garbage Collection ────────────────────────────────────────────────────
+    // Lấy URL cũ từ DB, nếu có thì xóa file cũ trên Supabase trước khi upload mới
+    const oldUrl = concert[cfg.dbField] as string | null;
+    if (oldUrl) {
+      try {
+        await this.storageService.deleteImage(cfg.bucket, oldUrl);
+      } catch (err) {
+        // Best-effort: log warning nhưng không block upload ảnh mới
+        this.logger.warn({ err, oldUrl, type }, 'GC: failed to delete old image — continuing');
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const ext = file.originalname.split('.').pop() || 'jpg';
-    const fileName = `seat-map_${id}_${Date.now()}.${ext}`;
-    const seatMapImageUrl = await this.uploadImageToSupabase('seat-maps', fileName, file);
+    const fileName = `${cfg.prefix}_${id}_${Date.now()}.${ext}`;
+    const imageUrl = await this.storageService.uploadImage(cfg.bucket, fileName, file);
 
-    await this.concertRepo.update(id, { seatMapImageUrl });
-    this.logger.info({ concertId: id, seatMapImageUrl }, 'Seat map uploaded');
-    return { seatMapImageUrl };
+    await this.concertRepo.update(id, { [cfg.dbField]: imageUrl });
+    this.logger.info({ concertId: id, type, imageUrl }, 'Image uploaded');
+    return { imageUrl };
   }
 
-  async uploadCoverImage(id: string, file: Express.Multer.File, user: { id: string; role: UserRole }): Promise<{ coverImageUrl: string }> {
-    if (user.role !== UserRole.ORGANIZER) {
-      throw new ForbiddenException('Chỉ ban tổ chức mới có quyền upload ảnh concert');
-    }
-    await this.findOne(id);
-
-    const ext = file.originalname.split('.').pop() || 'jpg';
-    const fileName = `cover_${id}_${Date.now()}.${ext}`;
-    const coverImageUrl = await this.uploadImageToSupabase('cover-images', fileName, file);
-
-    await this.concertRepo.update(id, { coverImageUrl });
-    this.logger.info({ concertId: id, coverImageUrl }, 'Cover image uploaded');
-    return { coverImageUrl };
-  }
 
   async remove(id: string, user: { id: string; role: UserRole }) {
     if (user.role !== UserRole.ORGANIZER) {

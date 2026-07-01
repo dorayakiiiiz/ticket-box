@@ -87,37 +87,26 @@ export class ConcertController {
     return this.concertService.resetBioStatus(id, req.user);
   }
 
-  @Post(':id/upload-seat-map')
+  @Post(':id/upload-image')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file', {
     storage: memoryStorage(),
     fileFilter: imageFileFilter,
     limits: { fileSize: MAX_IMAGE_SIZE },
   }))
-  uploadSeatMap(
+  uploadImage(
     @Param('id') id: string,
+    @Query('type') type: string,
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
   ) {
     if (!file) throw new BadRequestException('Vui lòng chọn file ảnh');
-    return this.concertService.uploadSeatMap(id, file, req.user);
+    if (type !== 'cover' && type !== 'seatMap') {
+      throw new BadRequestException('type phải là "cover" hoặc "seatMap"');
+    }
+    return this.concertService.uploadImage(id, file, type, req.user);
   }
 
-  @Post(':id/upload-cover-image')
-  @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file', {
-    storage: memoryStorage(),
-    fileFilter: imageFileFilter,
-    limits: { fileSize: MAX_IMAGE_SIZE },
-  }))
-  uploadCoverImage(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,
-  ) {
-    if (!file) throw new BadRequestException('Vui lòng chọn file ảnh');
-    return this.concertService.uploadCoverImage(id, file, req.user);
-  }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)

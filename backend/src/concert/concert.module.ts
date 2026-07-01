@@ -9,6 +9,7 @@ import { ConcertController } from './concert.controller';
 import { AiBioProcessor } from './ai-bio.processor';
 import { AiProviderModule } from '../ai-provider/ai-provider.module';
 import { Order } from '../entities/order.entity';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Order } from '../entities/order.entity';
     TypeOrmModule.forFeature([Concert, TicketType, Order]), // TicketType cần cho warm-up, Order cho tính pending vé
     BullModule.registerQueue({ name: 'ticketbox.concert.ai-bio' }),
     AiProviderModule,
+    StorageModule, // Cho phép ConcertService inject StorageService
   ],
   providers: [ConcertService, AiBioProcessor],
   controllers: [ConcertController],
