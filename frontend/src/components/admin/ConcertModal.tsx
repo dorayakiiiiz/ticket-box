@@ -447,8 +447,8 @@ export default function ConcertModal({
 
   const set =
     (k: keyof FormState) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((prev) => ({ ...prev, [k]: e.target.value }));
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+        setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -499,7 +499,7 @@ export default function ConcertModal({
       />
       <div className="relative bg-white w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header — Figma exact: sticky, border-b, title + X */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-100">
           <h2
             style={D}
             className="text-2xl font-black uppercase italic text-gray-900"
