@@ -144,6 +144,32 @@ export default async function EventDetailPage({
                 />
               </div>
             )}
+
+            {/* Seat map — sơ đồ chỗ ngồi từ Supabase Storage */}
+            {concert.seatMapImageUrl && (
+              <div className="mt-10">
+                <h2
+                  style={D}
+                  className="text-2xl font-black uppercase italic mb-4"
+                >
+                  Sơ đồ chỗ ngồi
+                </h2>
+                <div
+                  className="relative overflow-hidden border border-[#222] cursor-zoom-in group"
+                  onClick={undefined}
+                >
+                  <img
+                    src={concert.seatMapImageUrl}
+                    alt={`Sơ đồ chỗ ngồi ${concert.name}`}
+                    className="w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                    style={{ background: '#0a0a0a' }}
+                  />
+                </div>
+                <p className="text-[10px] text-gray-600 font-mono mt-2">
+                  Nhấn &quot;Chọn khu vực &amp; mua vé&quot; để tiến hành đặt vé theo khu vực mong muốn
+                </p>
+              </div>
+            )}
           </div>
 
           {/* ── Cột phải: Sticky CTA (Client Component vì có router.push) ── */}
