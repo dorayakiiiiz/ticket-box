@@ -99,11 +99,10 @@ import { RolesGuard } from './common/guards/roles.guard';
       useFactory: (configService: ConfigService, redisClient: Redis) => ({
         connection: redisClient as any,
       }),
-      // default là tên connection redis mặc định khi ko đặt ở RedisModule phía trên
       inject: [ConfigService, getRedisConnectionToken('default')],
     }),
-    // Rate Limiting toàn cục — mỗi IP/user tối đa 10 req/giây mặc định
-    // Sử dụng Redis để đồng bộ rate limit trên toàn bộ các server
+    // rate limiting toàn cục
+    // dùng redis để đồng bộ rate limit trên toàn bộ các server
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule, RedisModule],
       inject: [ConfigService, getRedisConnectionToken('default')],

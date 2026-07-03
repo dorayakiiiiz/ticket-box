@@ -5,21 +5,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
-/**
- * RedisService — trung tâm xử lý Redis cho toàn bộ Phase 3
- *
- * Chức năng:
- * 1. Load và cache Lua Script SHA khi server khởi động (SCRIPT LOAD)
- * 2. processBooking(): chạy Lua Script atomic trừ vé + check user limit
- * 3. checkIdempotency(): SET NX để chặn double-click
- * 4. setJobResult() / getJobResult(): lưu/đọc orderId cho FE polling
- * 5. rollbackBooking(): compensating transaction khi worker thất bại
- */
 @Injectable()
 export class RedisService implements OnModuleInit {
-  // SHA hash của Lua script — dùng EVALSHA thay vì EVAL để tiết kiệm bandwidth
+  // SHA hash của Lua script, dùng EVALSHA thay vì EVAL để tiết kiệm bandwidth
   private bookTicketScriptSha: string;
-  // Lưu nội dung script để fallback khi bị lỗi NOSCRIPT
+  // lưu nội dung script để fallback khi bị lỗi NOSCRIPT
   private bookTicketScriptContent: string;
 
   constructor(
@@ -28,8 +18,8 @@ export class RedisService implements OnModuleInit {
     @InjectRedis() private readonly redis: Redis,
   ) { }
 
-  // Khi NestJS khởi động, load Lua script vào bộ nhớ Redis
-  // Redis trả về SHA1 hash — sau đó dùng EVALSHA (nhanh hơn EVAL)
+  // khi app khởi động, load Lua script vào bộ nhớ redis
+  // redis trả về SHA1 hash, sau đó dùng EVALSHA (nhanh hơn EVAL)
   async onModuleInit() {
     try {
       const scriptPath = path.join(__dirname, 'lua', 'book-ticket.lua');
@@ -37,7 +27,6 @@ export class RedisService implements OnModuleInit {
       this.bookTicketScriptSha = await this.redis.script('LOAD', this.bookTicketScriptContent) as string;
       this.logger.info('Lua script [book-ticket] loaded successfully');
     } catch (err) {
-      // Không block server start — nhưng booking sẽ fail nếu script chưa load
       this.logger.error({ err }, 'Failed to load Lua script [book-ticket]');
     }
   }
@@ -49,7 +38,6 @@ export class RedisService implements OnModuleInit {
     quantity: number,
     maxPerUser: number,
   ): Promise<string> {
-    // Key pattern khớp với Phase 2: ticket_type:{id}:available (đã được seed)
     const ticketKey = `ticket_type:${ticketTypeId}:available`;
     const userLimitKey = `user:${userId}:ticket_type:${ticketTypeId}:tickets_held`;
 
@@ -72,7 +60,7 @@ export class RedisService implements OnModuleInit {
           ticketKey, userLimitKey,
           quantity, maxPerUser,
         ) as string;
-        
+
         // Cố gắng re-load script vào cache Redis cho các lần sau
         this.bookTicketScriptSha = await this.redis.script('LOAD', this.bookTicketScriptContent) as string;
         return result;
@@ -83,21 +71,16 @@ export class RedisService implements OnModuleInit {
 
   // Idempotency: Chặn double-click
   async checkIdempotency(key: string): Promise<boolean> {
-    // SET NX: chỉ set nếu key chưa tồn tại
-    // EX 3600: expire sau 1 tiếng 
     const result = await this.redis.set(
       `idempotency:${key}`,
       'processing',
       'EX', 3600,
       'NX',
     );
-    // Redis trả 'OK' nếu set thành công, null nếu key đã tồn tại
     return result === 'OK';
   }
 
-
   async setJobResult(idempotencyKey: string, orderId: string): Promise<void> {
-    // Expire sau 1h, FE sẽ poll trong vài giây, key không cần giữ lâu
     await this.redis.set(`job_result:${idempotencyKey}`, orderId, 'EX', 3600);
   }
 
@@ -114,7 +97,7 @@ export class RedisService implements OnModuleInit {
     const ticketKey = `ticket_type:${ticketTypeId}:available`;
     const userLimitKey = `user:${userId}:ticket_type:${ticketTypeId}:tickets_held`;
 
-    // Pipeline: gộp 2 lệnh thành 1 round-trip network
+    // gộp 2 lệnh thành 1 round-trip network
     const pipeline = this.redis.pipeline();
     pipeline.incrby(ticketKey, quantity);   // Cộng lại vé
     pipeline.decrby(userLimitKey, quantity); // Giảm counter user

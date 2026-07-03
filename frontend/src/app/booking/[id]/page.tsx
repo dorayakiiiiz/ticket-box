@@ -10,16 +10,7 @@ import type { Concert, ConcertAvailability, TicketType } from '@/types';
 import { fmt } from '@/utils/format';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 
-/**
- * SeatMapPage — Trang chọn khu vực và số lượng vé
- *
- * Phase 3: Giữ nguyên giao diện sơ đồ sân khấu (seat map) ban đầu
- * Chỉ thay đổi data source: mock → real API
- * - Fetch concert thật từ GET /concerts/:id
- * - Hiển thị ticketTypes thật ở sidebar (thay cho zones mock)
- * - SWR poll availability mỗi 5s để cập nhật số vé real-time
- * - Navigate sang /checkout/:concertId?ticketTypeId=xxx&qty=n
- */
+// SeatMap Page
 export default function SeatMapPage() {
   const params = useParams();
   const router = useRouter();
@@ -247,13 +238,12 @@ export default function SeatMapPage() {
                   <button
                     key={tt.id}
                     onClick={() => { if (!tt.soldOut) { setSel(tt); setQty(1); } }}
-                    className={`flex items-center gap-1.5 px-3 py-1 border transition-all ${
-                      sel?.id === tt.id
+                    className={`flex items-center gap-1.5 px-3 py-1 border transition-all ${sel?.id === tt.id
                         ? 'border-white/40 bg-white/10'
                         : tt.soldOut
                           ? 'border-transparent opacity-40 cursor-not-allowed'
                           : 'border-transparent hover:border-white/20 cursor-pointer'
-                    }`}
+                      }`}
                   >
                     <div className="w-2.5 h-2.5 shrink-0" style={{ backgroundColor: tt.colorCode || '#CCFF00' }} />
                     <span className="text-[9px] md:text-[10px] font-mono text-gray-300">{tt.name}</span>

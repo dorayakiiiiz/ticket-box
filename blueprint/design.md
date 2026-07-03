@@ -1,6 +1,6 @@
 # TicketBox — Technical Design
 
-> **Lưu ý:** Tài liệu này chứa các sơ đồ Mermaid. Để hiển thị đúng trong VS Code, hãy cài extension **Markdown Preview Mermaid Support** từ Marketplace.
+> **Lưu ý:** Tài liệu này chứa các sơ đồ Mermaid. Để hiển thị đúng trong VS Code, thầy vui lòng cài extension **Markdown Preview Mermaid Support** từ Marketplace ạ.
 
 ---
 
@@ -30,21 +30,21 @@ Codebase được chia module theo nghiệp vụ (mỗi module có Controller, S
 │                     TICKETBOX SYSTEM                            │
 │                                                                 │
 │  ┌─────────────────┐    ┌───────────────────────────────────┐   │
-│  │  Next.js Web     │    │        NestJS Backend API         │   │
-│  │  (Vercel)        │    │           (Render)                │   │
+│  │  Next.js Web    │    │        NestJS Backend API         │   │
+│  │  (Vercel)       │    │           (Render)                │   │
 │  │                 │    │                                   │   │
 │  │ • SSR/ISR pages │    │ Modules: Auth, Concert, Booking,  │   │
 │  │ • SWR polling   │    │ Payment, Ticket, Notification,    │   │
 │  │ • Admin panel   │    │ Guest, Admin                      │   │
 │  └────────┬────────┘    └──────────┬────────────────────────┘   │
-│           │                        │                             │
-│           │      REST API (JSON)   │                             │
-│           └────────────────────────┘                             │
+│           │                        │                            │
+│           │      REST API (JSON)   │                            │
+│           └────────────────────────┘                            │
 │                                                                 │
 │  ┌─────────────────┐    ┌──────────────┐   ┌─────────────────┐  │
-│  │  Flutter Mobile  │    │  PostgreSQL  │   │     Redis       │  │
-│  │  (Soát vé)       │    │  (Render)    │   │  (Upstash/      │  │
-│  │                 │    │              │   │   Render)       │  │
+│  │  Flutter Mobile │    │  PostgreSQL  │   │     Redis       │  │
+│  │  (Soát vé)      │    │  (Render)    │   │  (Redis Cloud)  │  │
+│  │                 │    │              │   │                 │  │
 │  │ • Offline-first │    │ 7 entities   │   │ • Cache vé      │  │
 │  │ • SQLite local  │    │ ACID trans   │   │ • Rate limit    │  │
 │  │ • QR scanner    │    │ Soft delete  │   │ • BullMQ        │  │
