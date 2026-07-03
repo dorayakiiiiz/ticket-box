@@ -323,7 +323,61 @@ sequenceDiagram
 
 Giải pháp: **chỉ trả vé về Redis khi đã hết toàn bộ số lần retry** (mặc định 3 lần). Lúc này chắc chắn Job sẽ không bao giờ thành công nữa, nên việc giải phóng slot là an toàn. Slot bị "khóa" thêm 8-12 giây (thời gian retry) là chấp nhận được so với rủi ro overselling.
 
----
+**Luồng hoàn chỉnh khi Worker thất bại 3 lần liên tiếp:**
+
+Dưới đây là sequence diagram mô tả chi tiết từng bước xảy ra khi Worker không thể tạo Order trong PostgreSQL sau 3 lần retry, bao gồm cả cách Frontend nhận biết và phản ứng:
+
+```mermaid
+sequenceDiagram
+    participant FE as Next.js Web
+    participant Q as BullMQ Queue
+    participant W as OrderProcessor
+    participant DB as PostgreSQL
+    participant R as Redis
+
+    Note over Q,W: Lần retry 1 (attempt = 1)
+    Q-->>W: Worker nhận job (attempt 1/3)
+    W->>DB: BEGIN TRANSACTION + INSERT order
+    DB-->>W: Connection timeout / Exception
+    W->>DB: ROLLBACK TRANSACTION
+    W->>W: attemptsMade (1) < attempts (3)
+    W->>W: KHÔNG trả vé Redis, giữ slot
+    W->>W: throw error — BullMQ chờ 2 giây
+
+    Note over Q,W: Lần retry 2 (attempt = 2, sau 2 giây)
+    Q-->>W: Worker nhận job (attempt 2/3)
+    W->>DB: BEGIN TRANSACTION + INSERT order
+    DB-->>W: Connection timeout / Exception
+    W->>DB: ROLLBACK TRANSACTION
+    W->>W: attemptsMade (2) < attempts (3)
+    W->>W: KHÔNG trả vé Redis, giữ slot
+    W->>W: throw error — BullMQ chờ 4 giây
+
+    Note over Q,W: Lần retry 3 — LẦN CUỐI (attempt = 3, sau 4 giây)
+    Q-->>W: Worker nhận job (attempt 3/3)
+    W->>DB: BEGIN TRANSACTION + INSERT order
+    DB-->>W: Connection timeout / Exception
+    W->>DB: ROLLBACK TRANSACTION
+    W->>W: attemptsMade (3) >= attempts (3) — HẾT RETRY
+
+    Note over W,R: Compensating Transaction — Hoàn vé Redis
+    W->>R: Pipeline (1 round-trip):
+    Note right of R: INCRBY ticket_type:{id}:available +quantity<br/>DECRBY user:{userId}:ticket_type:{id}:tickets_held -quantity
+    R-->>W: OK
+    W->>R: SET job_result:{idempotencyKey} 'FAILED' EX 3600
+    W->>W: throw error — BullMQ đánh dấu job FAILED
+
+    Note over FE,R: Frontend nhận biết thất bại
+    FE->>R: GET job_result:{idempotencyKey}
+    R-->>FE: 'FAILED'
+    FE->>FE: Hiển thị thông báo lỗi
+    FE->>FE: Sinh UUID mới (crypto.randomUUID)
+    FE->>FE: Ghi đè sessionStorage
+    FE->>FE: Kích hoạt lại nút "Đặt vé" cho người dùng thử lại
+```
+
+Tổng thời gian từ lần fail đầu tiên đến khi hoàn vé Redis: khoảng 2 + 4 = **6 giây** (exponential backoff). Trong khoảng thời gian này, slot vé bị "khóa" — không ai khác có thể mua, nhưng cũng không bị mất vĩnh viễn.
+
 
 ### 2.5. Cronjob Hủy Đơn Treo và Self-Healing
 
@@ -437,6 +491,20 @@ Khi chạy nhiều server NestJS (horizontal scaling), Redis SET NX đảm bảo
 - **Lua Script** kiểm tra đồng thời 2 điều kiện (hạn mức user + số vé còn) và thực hiện 2 thao tác (DECRBY vé + INCRBY counter user) trong **một lệnh duy nhất** không thể chia nhỏ (indivisible).
 
 - Thời gian xử lý trung bình của Lua Script: dưới 0.1ms. Throughput lý thuyết: khoảng 100.000 operations mỗi giây — đủ để xử lý 80.000 người truy cập đồng thời.
+
+**Ví dụ phân tích: 10.000 request đặt vé cùng lúc (VIP còn 500 vé)**
+
+Giả sử 10.000 người cùng bấm "Đặt vé" cho khu VIP (còn 500 vé, maxPerUser = 2, mỗi người mua 1 vé):
+
+| Lớp bảo vệ | Request bị chặn | Request đi tiếp | Lý do |
+|---|---|---|---|
+| **1. JwtAuthGuard** | ~200 (2%) | ~9.800 | Token hết hạn, token giả mạo |
+| **2. ThrottlerGuard** | ~3.000 (30%) | ~6.800 | Bot gửi > 3 req/giây/user bị chặn |
+| **3. CaptchaGuard** | ~800 (8%) | ~6.000 | Bot không qua được Turnstile |
+| **4. IdempotencyGuard** | ~1.000 (10%) | ~5.000 | Double-click, retry tự động |
+| **5. Lua Script** | ~4.500 (90% của 5.000) | **500** | SOLD_OUT sau khi bán đủ 500 vé |
+
+Kết quả: Chính xác **500 người** nhận 202 Accepted và được tạo Order. 9.500 người còn lại bị chặn ở các lớp bảo vệ trước khi tới database. PostgreSQL chỉ xử lý 500 INSERT (qua BullMQ Worker tuần tự) thay vì 10.000 — giảm tải 20 lần.
 
 ### 4.2. Idempotency
 
