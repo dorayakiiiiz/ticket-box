@@ -7,19 +7,6 @@ import { OrderProcessor } from './order.processor';
 import { TicketRedisModule } from '../redis/redis.module';
 import { TicketType } from '../entities/ticket-type.entity';
 import { Order } from '../entities/order.entity';
-
-/**
- * BookingModule — module đặt vé Phase 3
- *
- * Imports:
- * - TypeOrmModule: TicketType (đọc maxPerUser, price), Order (polling fallback)
- * - BullModule: đăng ký queue 'ticketbox.order' cho Worker
- * - TicketRedisModule: inject RedisService (Lua Script, Idempotency, Job Result)
- *
- * Providers:
- * - BookingService: logic nghiệp vụ
- * - OrderProcessor: BullMQ Worker xử lý tạo order trong Postgres
- */
 import { Concert } from '../entities/concert.entity';
 import { CronService } from './cron.service';
 
@@ -33,4 +20,4 @@ import { CronService } from './cron.service';
   controllers: [BookingController],
   providers: [BookingService, OrderProcessor, CronService],
 })
-export class BookingModule {}
+export class BookingModule { }

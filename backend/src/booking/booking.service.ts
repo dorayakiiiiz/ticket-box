@@ -8,18 +8,8 @@ import { RedisService } from '../redis/redis.service';
 import { TicketType } from '../entities/ticket-type.entity';
 import { Order } from '../entities/order.entity';
 
-// Tên queue — phải khớp với BullModule.registerQueue() trong BookingModule
 const ORDER_QUEUE = 'ticketbox.order';
 
-/**
- * BookingService — xử lý logic nghiệp vụ đặt vé Phase 3
- *
- * Flow:
- * 1. Validate ticketTypeId → lấy maxPerUser + concertId từ Postgres
- * 2. Gọi Redis Lua Script (atomic): check user limit → check availability → deduct
- * 3. Nếu SUCCESS → đẩy job vào BullMQ queue, trả jobId cho FE
- * 4. Nếu SOLD_OUT / LIMIT_EXCEEDED → throw lỗi ngay
- */
 @Injectable()
 export class BookingService {
   constructor(
@@ -31,23 +21,17 @@ export class BookingService {
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
     @InjectQueue(ORDER_QUEUE) private readonly orderQueue: Queue,
-  ) {}
+  ) { }
 
-  /**
-   * Xử lý booking request — gọi sau khi đã qua Rate Limit + Idempotency Guard
-   *
-   * @param userId - UUID user (từ JWT payload)
-   * @param ticketTypeId - UUID loại vé muốn mua
-   * @param quantity - Số lượng vé
-   * @param idempotencyKey - UUID từ FE header
-   */
+
+  // xử lý booking request, gọi sau khi đã qua rate limit + idempotency guard
   async handleBooking(
     userId: string,
     ticketTypeId: string,
     quantity: number,
     idempotencyKey: string,
   ) {
-    // 1. Lấy thông tin loại vé từ Postgres (maxPerUser, price, concertId)
+    // lấy thông tin loại vé từ postgres (maxPerUser, price, concertId)
     const ticketType = await this.ticketTypeRepo.findOne({
       where: { id: ticketTypeId },
       relations: { concert: true },
@@ -68,7 +52,7 @@ export class BookingService {
     const eventId = ticketType.concert.id;
     const maxPerUser = ticketType.maxPerUser;
 
-    // 2. Gọi Redis Lua Script — atomic: check limit + check available + deduct
+    // gọi redis lua script - atomic: check limit + check available + deduct
     const luaResult = await this.redisService.processBooking(
       ticketTypeId,
       userId,
@@ -80,7 +64,7 @@ export class BookingService {
       `Booking Lua result: ${luaResult} — user=${userId}, ticketType=${ticketTypeId}, qty=${quantity}`,
     );
 
-    // 3. Xử lý kết quả từ Lua Script
+    // xử lý kết quả từ Lua Script
     if (luaResult === 'SOLD_OUT') {
       throw new BadRequestException('Rất tiếc, loại vé này đã hết!');
     }
@@ -91,8 +75,7 @@ export class BookingService {
       );
     }
 
-    // 4. SUCCESS — Đẩy job vào BullMQ queue TRƯỚC rồi mới trả response
-    // Lý do: nếu trả FE thành công trước mà queue fail → mất đơn hàng
+    // success - đẩy job vào bullmq queue trước rồi mới trả response
     const job = await this.orderQueue.add('create-order', {
       userId,
       ticketTypeId,
@@ -101,10 +84,10 @@ export class BookingService {
       idempotencyKey,
       unitPrice: ticketType.price,
     }, {
-      attempts: 3, // Retry tối đa 3 lần nếu worker fail
+      attempts: 3, // retry tối đa 3 lần nếu worker fail
       backoff: { type: 'exponential', delay: 2000 },
       removeOnComplete: true,
-      removeOnFail: { count: 200 }, // Giữ 200 failed jobs để debug
+      removeOnFail: { count: 200 }, // giữ 200 failed jobs để debug
     });
 
     this.logger.info(
@@ -119,12 +102,10 @@ export class BookingService {
     };
   }
 
-  /**
-   * FE polling: kiểm tra order đã được Worker tạo xong chưa
-   * Ưu tiên đọc từ Redis (nhanh), fallback Postgres nếu Redis miss
-   */
+  // kiểm tra order đã được Worker tạo xong chưa
+  // ưu tiên đọc từ redis (nhanh), fallback postgres nếu redis miss
   async checkBookingStatus(idempotencyKey: string) {
-    // 1. Check Redis trước (nhanh O(1))
+    // check redis trước (nhanh O(1))
     const orderId = await this.redisService.getJobResult(idempotencyKey);
 
     if (orderId === 'FAILED') {
@@ -135,7 +116,7 @@ export class BookingService {
       return { status: 'completed', orderId };
     }
 
-    // 2. Fallback: check Postgres (phòng trường hợp Redis key expired)
+    // fallback: check postgres (phòng trường hợp redis key expired)
     const order = await this.orderRepo.findOne({
       where: { idempotencyKey },
     });
@@ -144,7 +125,7 @@ export class BookingService {
       return { status: 'completed', orderId: order.id };
     }
 
-    // 3. Chưa xong — Worker đang xử lý
+    // chưa xong - Worker đang xử lý
     return { status: 'processing', orderId: null };
   }
 }
