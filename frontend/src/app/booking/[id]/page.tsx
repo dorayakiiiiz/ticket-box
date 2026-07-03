@@ -210,7 +210,7 @@ export default function SeatMapPage() {
         <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-[#0D0D0D]">
           {concert.seatMapImageUrl ? (
             /* Hiển thị ảnh sơ đồ admin đã upload */
-            <div className="w-full max-w-2xl lg:max-w-4xl flex flex-col items-center gap-4">
+            <div className="w-full flex flex-col items-center gap-4">
               <p className="text-[11px] md:text-xs font-mono tracking-[0.2em] text-[#CCFF00] uppercase">
                 Chọn khu vực — Tham khảo sơ đồ
               </p>
@@ -223,8 +223,7 @@ export default function SeatMapPage() {
                 <img
                   src={concert.seatMapImageUrl}
                   alt={`Sơ đồ chỗ ngồi ${concert.name}`}
-                  className="w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
-                  style={{ maxHeight: '60vh', background: '#111' }}
+                  className="w-full object-contain transition-transform duration-300 group-hover:scale-[1.02] max-h-[70vh]"
                 />
                 {/* Hover overlay hint */}
                 <div className="absolute inset-0 flex items-end justify-end p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
