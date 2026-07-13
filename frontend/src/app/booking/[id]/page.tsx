@@ -239,10 +239,10 @@ export default function SeatMapPage() {
                     key={tt.id}
                     onClick={() => { if (!tt.soldOut) { setSel(tt); setQty(1); } }}
                     className={`flex items-center gap-1.5 px-3 py-1 border transition-all ${sel?.id === tt.id
-                        ? 'border-white/40 bg-white/10'
-                        : tt.soldOut
-                          ? 'border-transparent opacity-40 cursor-not-allowed'
-                          : 'border-transparent hover:border-white/20 cursor-pointer'
+                      ? 'border-white/40 bg-white/10'
+                      : tt.soldOut
+                        ? 'border-transparent opacity-40 cursor-not-allowed'
+                        : 'border-transparent hover:border-white/20 cursor-pointer'
                       }`}
                   >
                     <div className="w-2.5 h-2.5 shrink-0" style={{ backgroundColor: tt.colorCode || '#CCFF00' }} />
@@ -324,7 +324,7 @@ export default function SeatMapPage() {
             ))}
           </div>
 
-          {/* Chọn số lượng + Tiếp tục — giữ nguyên style */}
+          {/* Chọn số lượng + Tiếp tục */}
           {sel ? (
             <div className="p-5 border-t border-[#222]">
               <div className="text-xs md:text-sm font-black uppercase tracking-wide mb-1" style={{ color: sel.colorCode || '#CCFF00' }}>{sel.name}</div>

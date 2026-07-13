@@ -16,33 +16,11 @@ import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/booking.dto';
 import { Public } from '../common/guards/jwt.strategy';
 
-/**
- * BookingController — API endpoints cho flow đặt vé Phase 3
- *
- * POST /booking — Đặt vé (cần auth + rate limit + idempotency)
- * GET  /booking/status — FE polling kiểm tra order đã tạo xong chưa
- */
 @Controller('booking')
 export class BookingController {
-  constructor(private readonly bookingService: BookingService) {}
+  constructor(private readonly bookingService: BookingService) { }
 
-  /**
-   * POST /booking — Endpoint đặt vé chính
-   *
-   * Guard chain (thứ tự thực thi):
-   * 1. JwtAuthGuard (global) — xác thực user
-   * 2. ThrottlerGuard — rate limit 3 req/phút/user, chặn bot
-   * 3. CaptchaGuard — xác thực hành vi người dùng
-   * 4. IdempotencyGuard — chặn double-click bằng Redis SET NX
-   *
-   * Body: { ticketTypeId: string, quantity: number }
-   * Header: Idempotency-Key: <UUID>
-   *
-   * Response 202: { status, message, jobId, idempotencyKey }
-   * Response 400: Hết vé / Vượt limit
-   * Response 409: Request trùng lặp
-   * Response 429: Rate limit exceeded
-   */
+  // POST /booking — Đặt vé (cần auth + rate limit + idempotency)
   @Post()
   @UseGuards(ThrottlerGuard, CaptchaGuard, IdempotencyGuard)
   @Throttle({ default: { limit: 3, ttl: 1000 } }) // Tối đa 3 request / 1 giây
@@ -63,14 +41,7 @@ export class BookingController {
     );
   }
 
-  /**
-   * GET /booking/status?key=<idempotencyKey>
-   *
-   * FE polling endpoint — gọi mỗi 2 giây sau khi POST /booking trả 202
-   * Kiểm tra Worker đã tạo order trong Postgres xong chưa
-   *
-   * Response: { status: 'processing' | 'completed', orderId: string | null }
-   */
+  // GET /booking/status?key=<idempotencyKey>
   @Get('status')
   async checkStatus(@Query('key') idempotencyKey: string) {
     if (!idempotencyKey) {

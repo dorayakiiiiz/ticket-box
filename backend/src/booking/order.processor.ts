@@ -82,6 +82,7 @@ export class OrderProcessor extends WorkerHost {
         await this.redisService.setJobResult(idempotencyKey, 'FAILED');
       }
 
+      // ném lỗi để BullMQ xử lý retry
       throw err;
     } finally {
       await queryRunner.release();
