@@ -100,14 +100,15 @@ flutter run
 
 ---
 
-## Chạy Hệ Thống Bằng Docker (Khuyên Dùng)
+## Chạy Hệ Thống Bằng Docker
 
 Thay vì cài đặt thủ công, bạn có thể chạy nhanh dịch vụ Backend và Frontend thông qua Docker. Hạ tầng Database (PostgreSQL, Redis) đã được deploy trên Cloud nên không cần cấu hình Docker cho DB. 
 
 **Yêu cầu:** Máy tính đã cài đặt **Docker** và **Docker Compose**.
 
-Mở Terminal tại thư mục gốc của dự án và chạy lệnh:
+Mở Terminal tại thư mục `src` của dự án và chạy lệnh:
 ```bash
+cd src
 docker-compose up -d --build
 ```
 
