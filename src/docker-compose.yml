@@ -3,22 +3,22 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./src/backend
+      context: ./backend
     container_name: ticketbox_backend
     ports:
       - "8080:8080"
+      - "3000:3000"
     env_file:
-      - ./src/backend/.env
+      - ./backend/.env
     restart: unless-stopped
 
   frontend:
     build:
-      context: ./src/frontend
+      context: ./frontend
     container_name: ticketbox_frontend
-    ports:
-      - "3000:3000"
+    network_mode: "service:backend"
     env_file:
-      - ./src/frontend/.env.local
+      - ./frontend/.env.local
     depends_on:
       - backend
     restart: unless-stopped
