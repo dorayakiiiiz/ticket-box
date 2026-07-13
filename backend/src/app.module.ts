@@ -101,8 +101,8 @@ import { RolesGuard } from './common/guards/roles.guard';
       }),
       inject: [ConfigService, getRedisConnectionToken('default')],
     }),
-    // rate limiting toàn cục
-    // dùng redis để đồng bộ rate limit trên toàn bộ các server
+    // Rate limiting toàn cục
+    // Dùng redis để đồng bộ rate limit trên toàn bộ các server
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule, RedisModule],
       inject: [ConfigService, getRedisConnectionToken('default')],
