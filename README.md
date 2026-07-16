@@ -27,6 +27,9 @@ Dự án này tập trung giải quyết những "nút thắt" hóc búa nhất 
 
 ## Hướng Dẫn Cài Đặt & Chạy Môi Trường Local
 
+> **LƯU Ý:** 
+> Nếu clone code từ GitHub, dự án sẽ không bao gồm các file biến môi trường (`.env`). Vui lòng **lấy các file `.env` đã được cung cấp sẵn trên Google Drive** và đặt vào đúng thư mục (`src/backend/.env` và `src/frontend/.env.local`) để hệ thống kết nối đúng với Database và dịch vụ Cloud đã cấu hình sẵn.
+
 Dưới đây là các bước để chạy toàn bộ hệ thống (Web + Backend) ở môi trường máy tính cá nhân.
 
 ### 1. Cài Đặt Backend (NestJS)
